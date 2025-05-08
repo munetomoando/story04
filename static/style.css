@@ -293,6 +293,9 @@ td {
     font-weight: bold;
     text-align: center;
     margin-bottom: 5px;
+    white-space: nowrap;     /* 折り返し禁止 */
+    overflow: hidden;        /* はみ出したら隠す */
+    text-overflow: ellipsis; /* はみ出したら「…」で省略 */
 }
 
 /* 評価ボタンのグループ */

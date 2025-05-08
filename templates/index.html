@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Comic+Neue:wght@300;400;700&family=Yomogi&display=swap" rel="stylesheet">
+    <title>Clustering Workshop ログイン</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<script>
+    // 3秒後にフラッシュメッセージを消す
+    setTimeout(() => {
+        let flashMessages = document.getElementById("flash-messages");
+        if (flashMessages) {
+            flashMessages.style.display = "none";
+        }
+    }, 3000);
+
+    // ✅ ポップアップメッセージを表示する処理
+    window.onload = function() {
+        const alertMessages = JSON.parse('{{ messages | default([]) | tojson | safe }}');
+        if (alertMessages.length > 0) {
+            alert(alertMessages[0]);
+        }
+    };
+</script>
+<body>
+    <div class="login-container">
+        <!-- イラスト画像 -->
+        <img src="/static/images/clustering.png" alt="ログインイラスト" class="login-illustration">
+
+        <div class="login-title">
+            <span class="title-small">Collaboratibe Filteringによる</span>
+            <span class="title-large">AI推薦＆クラスタリング</span>
+            <span class="title-normal">ログイン</span>
+        </div>
+
+         <!-- フラッシュメッセージ表示 -->
+            {% if error_message %}
+            <div class="flash-messages">
+                <p class="error">{{ error_message }}</p>
+            </div>
+        {% endif %}
+
+        <form method="post" action="/login" class="form-container">
+            <label for="username">ユーザー名:</label>
+            <input type="text" id="username" name="username" placeholder="ユーザー名" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます">
+            
+            <label for="password">パスワード:</label>
+            <input type="password" id="password" name="password" placeholder="パスワード" required>
+            
+            <button type="submit" class="login-button">ログイン</button>
+        </form>
+        
+        
+        <p><a href="/register" class="register-button">新規ユーザー登録はこちら</a></p>
+    </div>
+
+</body>
+</html>

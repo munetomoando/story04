@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ユーザー登録</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>ユーザー登録</h1>
+        
+        <div id="flash-messages" class="flash-messages" style="display: none;"></div>
+        
+        <div class="form-wrapper">
+            <form action="/register" method="post" class="form-container">
+                <label for="username">ユーザー名:</label>
+                <p class="info-text">※ ユーザー名は、アルファベット（大文字・小文字）と数字のみ使用できます。</p>
+                <input type="text" id="username" name="username" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます" onblur="checkUsername()">
+                <p id="username-message" style="color: red; display: none;"></p>
+
+                <label for="password">パスワード (8文字以上、英数字と記号を1つ以上含めてください):</label>
+                <input type="password" id="password" name="password" pattern="^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$" required title="8文字以上の英数字+記号を含めてください">
+
+                <form action="/register" method="post">
+                    <button type="submit" class="big-button submit-btn">登録</button>
+                </form>
+            </form>
+        </div>
+
+        <p>既に登録済みですか？ <a href="/" class="big-button back-btn">ログイン</a></p>
+    </div>
+
+    <script>
+        // 3秒後にフラッシュメッセージを消す
+        setTimeout(() => {
+            let flashMessages = document.getElementById("flash-messages");
+            if (flashMessages) {
+                flashMessages.style.display = "none";
+            }
+        }, 3000);
+
+        // ✅ ユーザー名の存在チェック（AJAX）
+        function checkUsername() {
+            let username = document.getElementById("username").value;
+            let message = document.getElementById("username-message");
+
+            if (username.length === 0) {
+                message.style.display = "none";
+                return;
+            }
+
+            fetch(`/check_username?username=${encodeURIComponent(username)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        message.innerText = "このユーザー名は既に使用されています。";
+                        message.style.display = "block";
+                    } else {
+                        message.style.display = "none";
+                    }
+                })
+                .catch(error => console.error("ユーザー名チェックエラー:", error));
+        }
+    </script>
+</body>
+</html>

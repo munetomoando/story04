@@ -1,0 +1,582 @@
+/* すべての要素に border-box を適用 */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* 全体のフォントとレイアウト */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #e8f5e9; /* 優しい緑色の背景 */
+    color: #2e7d32;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* コンテナのデザイン */
+.container {
+    max-width: 800px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 10px rgba(0, 128, 0, 0.2);
+    text-align: center;
+}
+
+/* タイトルデザイン */
+h1 {
+    font-size: 24px;
+    color: #1b5e20;
+}
+
+/* ログインタイトルデザイン */
+.login-title {
+    text-align: center;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+.title-small {
+    display: block;
+    font-size: 16px;
+    color: #388e3c;
+    font-weight: bold;
+}
+
+.title-large {
+    display: block;
+    font-size: 32px;
+    font-weight: bold;
+    color: #1b5e20;
+}
+
+.title-normal {
+    display: block;
+    font-size: 18px;
+    color: #2e7d32;
+    margin-top: 5px;
+}
+
+/* ログインコンテナデザイン */
+.login-container {
+    max-width: 400px;
+    width: 90%;
+    margin: 50px auto;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ログインイラストのサイズ調整 */
+.login-illustration {
+    max-width: 100%; /* コンテナ内に収まる最大サイズ */
+    height: auto;
+    display: block;
+    margin: 0 auto 20px auto; /* 下に余白を作る */
+    border-radius: 10px;
+}
+
+/* フォームデザイン */
+.form-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* 入力欄のスタイル */
+.form-container input {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    padding: 10px;
+    margin: 8px auto 15px auto;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* ボタンデザイン */
+.btn {
+    display: inline-block;
+    margin: 10px;
+    padding: 10px 15px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 16px;
+    transition: background 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #388e3c;
+}
+
+.btn-logout {
+    background-color: #d32f2f;
+}
+
+.btn-logout:hover {
+    background-color: #b71c1c;
+}
+
+/* おすすめリストのデザイン */
+.object-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+
+.object-card {
+    background: #f1f8e9;
+    border: 1px solid #a5d6a7;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 2px 2px 8px rgba(0, 128, 0, 0.1);
+    width: 250px;
+    text-align: center;
+}
+
+.object-card h2 {
+    font-size: 18px;
+    color: #2e7d32;
+}
+
+/* トースト通知デザイン */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.8);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+    animation: fadeIn 0.5s;
+}
+
+.toast.success {
+    background-color: #28a745;
+}
+
+.toast.error {
+    background-color: #dc3545;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 推薦結果ページ全体の中央揃え */
+.recommendations-page .container {
+    text-align: center;  /* ✅ タイトルやボタンを中央揃え */
+}
+
+/* 🔥 Safari でも確実に中央揃えするための修正 */
+.recommendations-page .table-container {
+    display: flex;
+    justify-content: center; /* ✅ テーブルを中央揃え */
+}
+
+/* 推薦結果のテーブル */
+.recommendations-page .recommendations-table {
+    width: 60%;
+    border-collapse: collapse;
+    text-align: center;
+}
+
+/* テーブルのセルのスタイル */
+.recommendations-page .recommendations-table th, 
+.recommendations-page .recommendations-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+}
+
+/* テーブルのヘッダー */
+.recommendations-page .recommendations-table th {
+    background-color: #f4f4f4;
+}
+td {
+    white-space: pre-line;
+}
+
+.register-button {
+    display: inline-block;
+    background-color: #007bff; /* ✅ ブルー系のボタン */
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+}
+
+.register-button:hover {
+    background-color: #0056b3; /* ✅ ホバー時に少し暗くする */
+}
+
+.login-button {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin: 20px auto;
+    padding: 12px 20px;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    background-color: #28a745; /* ✅ 通常時の色 */
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+    user-select: none; /* ✅ ボタンのテキストを選択できなくする（スマホ向け） */
+}
+
+/* ✅ PCのマウスホバー時 */
+.login-button:hover {
+    background-color: #218838;
+}
+
+/* ✅ スマホ・タブレットでタップ時にも変化を加える */
+.login-button:active {
+    background-color: #1e7e34; /* ✅ タップしたときにもう少し暗い色にする */
+    transform: scale(0.96); /* ✅ 少し小さくして押した感を出す */
+}
+
+/* ✅ スマホ・タブレットでボタンを「押したまま」のときのスタイル */
+@media (hover: none) {
+    .login-button:focus {
+        background-color: #1e7e34; /* ✅ タップ時にホバー効果を代替 */
+    }
+}
+
+.rating-box {
+    display: flex;
+    flex-direction: column; /* ✅ スマホでは縦配置 */
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+/* お店の名前 */
+.store-name {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+/* 評価ボタンのグループ */
+.rating-options {
+    display: flex;
+    flex-wrap: wrap; /* ✅ スマホでは折り返し */
+    justify-content: center;
+    gap: 6px;
+}
+
+/* 評価ボタン */
+.rating-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px; /* ✅ スマホ用にボタン幅を縮小 */
+    height: 40px;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 5px;
+    background-color: #f0f0f0;
+    transition: background-color 0.2s ease;
+}
+
+/* ✅ ラジオボタンを非表示 */
+.rating-options input[type="radio"] {
+    display: none;
+}
+
+/* ✅ 選択時に色を変更 */
+.rating-options input[type="radio"]:checked + span {
+    background-color: #ffcc00;
+    font-weight: bold;
+    padding: 6px;
+    border-radius: 5px;
+}
+
+/* ✅ スマホ用の調整 */
+@media (max-width: 480px) {
+    .rating-box {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .rating-options {
+        gap: 4px;
+    }
+
+    .rating-label {
+        width: 40px; /* ✅ スマホではボタン幅をさらに縮小 */
+        height: 35px;
+        font-size: 12px;
+        padding: 5px;
+    }
+}
+
+.submit-container {
+    margin-bottom: 10px;
+}
+
+.recommend-btn-container {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.submit-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.recommend-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+/* すべての大きなボタンに共通のスタイル */
+.big-button {
+    display: block; /* ボタン全体をクリックしやすくする */
+    width: 100%; /* 幅いっぱいに広げる */
+    max-width: 300px; /* ボタンの最大幅を設定 */
+    padding: 15px 20px; /* 内側の余白を増やしてボタンを大きく */
+    font-size: 18px; /* 文字サイズを大きく */
+    text-align: center; /* テキストを中央揃え */
+    border-radius: 10px; /* 角を丸くする */
+    border: none; /* ボーダーを消す */
+    cursor: pointer; /* ホバー時にポインターを表示 */
+    text-decoration: none; /* <a> の下線を消す */
+    color: white; /* 文字色を白に */
+    margin: 10px auto; /* ボタンの間隔を適度に */
+    transition: background-color 0.3s; /* ホバー時の色変更をスムーズに */
+}
+
+/* 追加ボタンのデザイン */
+.submit-btn {
+    background-color: #007bff; /* 青色 */
+}
+
+.submit-btn:hover {
+    background-color: #0056b3; /* 濃い青色（ホバー時） */
+}
+
+/* 戻るボタンのデザイン */
+.back-btn {
+    background-color: #28a745; /* 緑色 */
+}
+
+.back-btn:hover {
+    background-color: #1e7e34; /* 濃い緑色（ホバー時） */
+}
+
+/* 評価のラベル全体を囲むコンテナ */
+.rating-container {
+    display: flex;
+    justify-content: center;
+    gap: 8px; /* ボタン間の間隔 */
+}
+
+/* 各評価ラベル */
+.rating-label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+/* ラジオボタンを非表示にする（デザインカスタマイズ用） */
+.rating-label input[type="radio"] {
+    display: none;
+}
+
+/* ラベルをボタン風にする */
+.rating-box {
+    display: inline-block;
+    padding: 10px 15px;
+    border: 2px solid #007bff; /* デフォルトの青枠 */
+    border-radius: 5px;
+    font-size: 16px;
+    text-align: center;
+    min-width: 40px; /* 幅を一定にする */
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+/* ホバー時のハイライト */
+.rating-label:hover .rating-box {
+    background-color: #e0e0e0; /* 灰色 */
+}
+
+/* 選択時のスタイル */
+.rating-label input[type="radio"]:checked + .rating-box {
+    background-color: #ffc107; /* 選択時は黄色 */
+    border-color: #ff9800; /* 選択時はオレンジ */
+}
+
+/* ========== 評価ボックスのデザイン ========== */
+
+/* 各評価コンテナ（枠を削除） */
+.rating-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* ✅ 店名と評価を横並び */
+    width: 100%;
+    padding: 10px;
+    background-color: #f0f0f0; /* ✅ 青枠をなくして背景のみ */
+    border: none; /* ✅ 青枠を削除 */
+}
+
+/* お店の名前 */
+.store-name {
+    width: 150px;
+    font-weight: bold;
+    margin-right: 30px; /* ✅ オブジェクト名と選択肢の間隔をさらに広げる */
+}
+
+/* 評価ボタンを横並びにする */
+.rating-options {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 400px; /* ✅ 横幅を制限 */
+    flex-wrap: nowrap; /* ✅ 改行させない */
+}
+
+/* 各評価ラベル（ボタン化） */
+.rating-label {
+    flex: 1; /* ✅ すべてのボタンの幅を均等に */
+    text-align: center;
+    cursor: pointer;
+}
+
+/* ✅ デフォルトのラジオボタンを非表示 */
+.rating-label input[type="radio"] {
+    display: none;
+}
+
+/* ✅ ボタンのデザイン（デフォルト時：灰色背景） */
+.rating-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 16px;
+    min-width: 40px;
+    min-height: 50px;
+    background-color: #f0f0f0; /* ✅ ボタン自体の背景色 */
+    color: black; /* ✅ 文字を黒く */
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
+    flex: 1;
+    text-align: center;
+    border: none; /* ✅ 青枠を削除 */
+}
+
+/* ✅ 選択時にボタンの背景色を変える（青枠はつけない） */
+.rating-label input[type="radio"]:checked + .rating-box {
+    background-color: #007bff; /* ✅ 選択時の背景色を青に */
+    color: white; /* ✅ 文字を白に */
+}
+
+/* ✅ ホバー時に背景を薄い青に */
+.rating-label:hover .rating-box {
+    background-color: #d9e8ff;
+}
+
+/* ✅ スマホ対応 */
+@media (max-width: 500px) {
+    .rating-options {
+        max-width: 100%; /* ✅ 画面いっぱいに広げる */
+    }
+    .rating-box {
+        font-size: 14px; /* ✅ フォントを小さめに調整 */
+        padding: 8px;
+    }
+}
+
+/* ✅ クラスターの2つの表を横並びに */
+.cluster-table-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap; /* 画面幅が狭いときは縦に並ぶ */
+}
+
+/* ✅ 各テーブルのスタイル */
+.cluster-table-wrapper {
+    width: 48%; /* 画面の半分ずつ使う */
+}
+
+.cluster-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #f9f9f9;
+}
+
+/* ✅ 表のヘッダー */
+.cluster-table th {
+    background-color: #007bff;
+    color: white;
+    padding: 10px;
+}
+
+/* ✅ 表のセル */
+.cluster-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
+
+/* ✅ スマホ対応 */
+@media (max-width: 768px) {
+    .cluster-table-container {
+        flex-direction: column; /* スマホでは縦並びに */
+    }
+    .cluster-table-wrapper {
+        width: 100%;
+    }
+}

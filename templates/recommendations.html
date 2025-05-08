@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>おすすめの結果</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="recommendations-page">
+    <div class="container">
+        <h1>AI分析結果：あなたへのおすすめ</h1>
+        <p>推薦スコアが0.75以上は特にお勧めとして★★★<br>
+        0.5以上はお勧めとして★★<br>
+        0.25以上は参考推薦として★で表示しています</p>
+
+        {% if recommendations %}
+        <div class="table-container"> <!-- ✅ flexbox で中央揃え -->
+            <table class="recommendations-table">
+                <tr>
+                    <th>オブジェクトID</th>
+                    <th>オブジェクト名</th>
+                    <th>推薦スコア</th>
+                    <th>評価</th> <!-- ⭐ 追加 -->
+                </tr>
+                {% for recommendation in recommendations %}
+                    {% if recommendation.recommendation_score >= 0.25 %}  <!-- ⭐ スコア0.25未満は表示しない -->
+                    <tr>
+                        <td>{{ recommendation.object_id }}</td>
+                        <td>{{ recommendation.object_name }}</td>
+                        <td>{{ recommendation.recommendation_score }}</td>
+                        <td>
+                            {% if recommendation.recommendation_score >= 0.75 %}
+                                ★★★
+                            {% elif recommendation.recommendation_score >= 0.5 %}
+                                ★★
+                            {% elif recommendation.recommendation_score >= 0.25 %}
+                                ★
+                            {% else %}
+                                推薦なし
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+        </div>
+        {% else %}
+            <p>現在、おすすめはありません。</p>
+        {% endif %}
+
+        <hr>
+        <a href="/" id="back-to-home" class="btn">評価ページに戻る</a>
+        <a href="/logout" id="logout-btn" class="btn btn-logout">ログアウト</a>
+
+    </div>
+    <script>
+        // ✅ 履歴を書き換えてURLを "/" に統一（リロード後も問題なく戻れる）
+        window.onload = function() {
+            history.replaceState(null, "", "/");
+        };
+    
+        // ✅ ログアウト時に確実に "/" に戻るようにする
+        document.getElementById("logout-btn").addEventListener("click", function(event) {
+            event.preventDefault();  // ✅ 通常のリンク動作をキャンセル
+            fetch("/logout", { method: "POST" }) // ✅ 明示的に POST リクエストを送る
+                .then(response => {
+                    window.location.href = "/index";  // ✅ 確実に index.html に戻る
+                })
+                .catch(error => {
+                    console.error("ログアウトエラー:", error);
+                    window.location.href = "/index";  // ✅ エラーが発生してもトップに戻る
+                });
+        });
+    </script>
+</body>
+</html>

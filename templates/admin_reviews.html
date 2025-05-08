@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>レビュー管理画面</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* テーブル全体のスタイル */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white; /* 背景を白く */
+    }
+
+    th, td {
+        border: 1px solid #ddd; /* 枠線を表示 */
+        padding: 10px;
+        text-align: center; /* セル内のテキストを中央揃え */
+    }
+
+    th {
+        background-color: #f4f4f4; /* ヘッダーを淡いグレー */
+        font-weight: bold;
+    }
+
+    /* 推薦スコアのセルの背景色をスコアに応じて変更 */
+    .score-non {
+        background-color: white; 
+    }
+
+    .score-low {
+        background-color: #d6ebff; 
+    }
+
+    .score-mid {
+        background-color: #cce5ff; /* 淡いブルー */
+    }
+
+    .score-high {
+        background-color: #99ccff; /* 濃いブルー */
+    }
+
+    /* 星マークのスタイル */
+    .stars {
+        color: gold;
+        font-weight: bold;
+    }
+
+
+    .cluster-table-container {
+        max-width: 400px; /* 横幅を制限 */
+        margin: 0 auto; /* 中央配置 */
+        padding: 10px;
+        background-color: #f9f9f9; /* 背景を少し灰色に */
+        border-radius: 8px; /* 角を丸める */
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 影を追加 */
+    }
+
+    .cluster-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: auto;
+        font-size: 14px;
+    }
+
+    .cluster-table th, .cluster-table td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: center;
+    }
+
+    .cluster-table th {
+        background-color: #ddd; /* ヘッダーの背景色 */
+        font-weight: bold;
+    }
+
+    .recommendation-box {
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.15);
+    max-width: 500px;
+    margin: 20px auto;
+    text-align: center;
+    }
+
+    .recommendation-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+
+    .recommendation-table th, .recommendation-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+
+    .recommendation-table th {
+        background-color: #f8f8f8;
+        font-weight: bold;
+    }
+    td.description {
+        white-space: pre-line;
+    }
+
+</style>
+</head>
+<body>
+  <h1>ユーザー × 評価対象 評価一覧</h1>
+
+    <h2>推薦スコア</h2>
+    <div class="recommendation-box">
+      <p>
+          推薦スコアは、ユーザーの評価データと類似ユーザーの傾向を基に算出しています。<br>
+          <strong>スコアが高いほど推薦度が高くなります。</strong>
+      </p>
+      <table class="recommendation-table">
+          <tr>
+              <th>スコア</th>
+              <th>評価</th>
+          </tr>
+          <tr>
+              <td>0.75以上</td>
+              <td>★★★（特に強くおすすめ）</td>
+          </tr>
+          <tr>
+              <td>0.5以上</td>
+              <td>★★（強くおすすめ）</td>
+          </tr>
+          <tr>
+              <td>0.25以上</td>
+              <td>★（おすすめ）</td>
+          </tr>
+          <tr>
+              <td>0.25未満</td>
+              <td>推薦なし</td>
+          </tr>
+      </table>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>ユーザー</th>
+                {% for obj_name in column_names %}
+                    <th>{{ obj_name }}</th>  {# object_name を表示 #}
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in pivot_table %}
+            <tr>
+                <td>{{ row.username }}</td>
+                {% for obj_name in column_names %}
+                {% set cell_content = row.get(obj_name, '-') %}
+                {% set score = '-' %}
+                
+                {% if cell_content is not none and 'RS:' in cell_content %}
+                    {% set parts = cell_content.split('\n') %}
+                    {% if parts | length > 2 %}
+                        {% set score = parts[2].replace('RS: ', '') %}
+                    {% endif %}
+                {% endif %}
+
+                {% set score_class = '' %}
+                {% if score != '-' %}
+                    {% set score_float = score | float %}
+                    {% if score_float >= 0.75 %}
+                        {% set score_class = 'score-high' %}
+                    {% elif score_float >= 0.5 %}
+                        {% set score_class = 'score-mid' %}
+                    {% elif score_float >= 0.25 %}
+                        {% set score_class = 'score-low' %}
+                    {% else %}
+                        {% set score_class = 'score-non' %}
+                    {% endif %}
+                {% endif %}
+
+                <td class="{{ score_class }}">{{ cell_content | safe }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>推薦スコアの分布とカーネル密度推定</h2>
+    <img src="data:image/png;base64,{{ recommendation_hist_base64 | safe }}" alt="推薦スコアのヒストグラム">
+
+    <h2>ユーザー類似度のヒートマップ</h2>
+    <img src="data:image/png;base64,{{ heatmap_base64 | safe }}" alt="ユーザー類似度ヒートマップ">
+
+    <h2>ユーザー類似度の分布とカーネル密度推定</h2>
+    <img src="data:image/png;base64,{{ similarity_hist_base64 | safe }}" alt="ユーザー類似度のヒストグラム">
+
+    <h2>ユーザークラスタリング</h2>
+    <!-- クラスタ表を横並びに配置 -->
+<div class="cluster-table-container">
+    <div class="cluster-table">
+        <h3>ユーザー名順 (ABC順)</h3>
+        <table class="cluster-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Cluster</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in cluster_sorted_by_username %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.cluster }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- クラスタ順のクラスタ表 -->
+    <div class="cluster-table">
+        <h3>クラスタ順</h3>
+        <table class="cluster-table">
+            <thead>
+                <tr>
+                    <th>Cluster</th>
+                    <th>Username</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in cluster_sorted_by_cluster %}
+                <tr>
+                    <td>{{ user.cluster }}</td>
+                    <td>{{ user.username }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<style>
+    .cluster-container {
+        display: flex;         /* 横並びにする */
+        justify-content: space-between; /* 均等に配置 */
+        gap: 20px;             /* 余白を設ける */
+    }
+    
+    .cluster-table {
+        flex: 1;               /* 各表を均等な幅に */
+        min-width: 300px;       /* 最小幅を指定 */
+    }
+
+    /* 📱 スマホ対応 (768px以下では縦並び) */
+    @media (max-width: 768px) {
+        .cluster-container {
+            flex-direction: column; /* 縦並びに切り替え */
+        }
+    }
+</style>   
+
+    <h2>ユーザークラスタリングの可視化</h2>
+    <img src="data:image/png;base64,{{ cluster_plot_base64 | safe }}" alt="ユーザークラスタリングの可視化">
+
+</body>
+</html>

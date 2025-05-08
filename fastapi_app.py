@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, Form, Depends, Request
+from fastapi import FastAPI, Query, Form, Depends, Request, HTTPException
 import pandas as pd
 from recommendation import recommend_for_all_users, user_object_matrix, user_zscore_matrix, user_similarity, get_username
 from utils import load_object_names
@@ -28,6 +28,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from fastapi import APIRouter
 import urllib.parse
 from scipy.stats import chi2
+import portalocker
+
 
 
 
@@ -243,25 +245,30 @@ async def show_register_page(request: Request):
 async def register_user(request: Request, username: str = Form(...), password: str = Form(...)):
     """ 新規ユーザー登録処理 """
     if not os.path.exists(USERS_FILE):
-        with open(USERS_FILE, "w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            writer.writerow(["user_id", "username", "password_hash"])  # ヘッダー追加
+        # 【修正②】ヘッダー作成時もロックを取得
+        try:
+            with portalocker.Lock(USERS_FILE, mode="w+", timeout=5) as fh:
+                writer = csv.writer(fh)
+                writer.writerow(["user_id", "username", "password_hash"])
+        except portalocker.exceptions.LockException:
+            logging.error("Failed to acquire lock for users.csv header creation")
+            raise HTTPException(status_code=503, detail="ユーザー登録中にロックタイムアウトが発生しました。")
 
     # 既存のユーザーを取得
     existing_users = []
-    with open(USERS_FILE, "r", newline="", encoding="utf-8") as file:
-        reader = csv.reader(file)
-        next(reader, None)  # ヘッダーをスキップ
-        for row in reader:
-            # 万が一行が不正な場合の対策として長さチェック
-            if len(row) >= 2:
-                existing_users.append(row[1])
-
+    with portalocker.Lock(USERS_FILE, mode="r", timeout=5):  # 【修正③】読み込みもロックして一貫性を担保
+        with open(USERS_FILE, "r", newline="", encoding="utf-8") as file:
+            reader = csv.reader(file)
+            next(reader, None)
+            for row in reader:
+                if len(row) >= 2:
+                    existing_users.append(row[1])
     if username in existing_users:
         return templates.TemplateResponse("register.html", {
             "request": request,
             "error_message": "このユーザー名は既に登録されています。"
         })
+        
 
     user_id = str(len(existing_users) + 1)
     hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -275,11 +282,22 @@ async def register_user(request: Request, username: str = Form(...), password: s
             if last_byte != b'\n':
                 newline_needed = True
 
-    with open(USERS_FILE, "a", newline="", encoding="utf-8") as file:
-        if newline_needed:
-            file.write("\n")
-        writer = csv.writer(file)
-        writer.writerow([user_id, username, hashed_password])
+    try:
+        # 【修正④】追記時にもロックを取得
+        with portalocker.Lock(USERS_FILE, mode="a+", timeout=5) as fh:
+            # ファイル末尾に改行がなければ追加
+            if newline_needed:
+                fh.write("\n")
+            writer = csv.writer(fh)
+            writer.writerow([user_id, username, hashed_password])
+        logging.info(f"New user registered: {username} (id={user_id})")
+    except portalocker.exceptions.LockException:
+        logging.error("Failed to acquire lock for users.csv append")
+        raise HTTPException(status_code=503, detail="ユーザー登録中にファイルがロックされています。")
+    except Exception as e:
+        logging.error(f"Error writing to users.csv: {e}")
+        return JSONResponse(content={"detail": "Failed to register user"}, status_code=500)
+    
     
     _cached_merged_df, _cached_object_id_to_name, _cached_recommend_df, _cached_user_dict = create_merged_df()
 
@@ -349,18 +367,25 @@ async def add_objects(request: Request, object_names: str = Form(...)):
             "error_message": "すべての評価対象が既に登録されています。"
         })
 
-    #  CSV に新しい評価対象を追加
-    with open(OBJECTS_FILE, "a", newline="", encoding="utf-8-sig") as file:
-        writer = csv.writer(file)
-        writer.writerows(added_objects)  # まとめて書き込む
+
+    try:
+        # 'a+' モードで開きつつロック（読み書き＋追記モード）
+        with portalocker.Lock(OBJECTS_FILE, mode="a+", timeout=5) as fh:
+            writer = csv.writer(fh)
+            writer.writerows(added_objects)
+        logging.info(f"Added {len(added_objects)} objects with file lock: {added_objects}")
+    except portalocker.exceptions.LockException:
+        logging.error("Failed to acquire lock for objects.csv")
+        # ロック失敗時は 503 を返して再試行を促す
+        raise HTTPException(status_code=503, detail="オブジェクト追加時にファイルがロックされています。")
+
+
 
     # ──────────────── ここから修正箇所 ────────────────
-    # グローバルの object_dict を再読み込みして最新化する
-    global object_dict
-    import pandas as pd  # ensure pandas is imported
     objects_df = pd.read_csv(OBJECTS_FILE, encoding="utf-8-sig", dtype={"object_id": str})
     object_dict.clear()
     object_dict.update(dict(zip(objects_df["object_id"], objects_df["object_name"])))
+    logging.info("object_dict reloaded after add_objects")
     # ──────────────── 修正箇所ここまで ────────────────
 
     _cached_merged_df, _cached_object_id_to_name, _cached_recommend_df, _cached_user_dict = create_merged_df()
@@ -370,6 +395,9 @@ async def add_objects(request: Request, object_names: str = Form(...)):
 
     # ✅ 登録成功後に `messages` をクエリパラメータとして渡す
     return RedirectResponse(url=f"/add_objects?success=true&message={message}", status_code=303)
+
+
+
 
 @app.get("/rating")
 async def show_rating_page(request: Request):
@@ -450,6 +478,8 @@ async def submit_ratings(request: Request):
     user_id = request.session["user_id"]
     logging.info(f"Processing ratings for user_id: {user_id}")  # ✅ ログを追加
 
+
+
     # `ratings.csv` を DataFrame として読み込む
     if os.path.exists(RATINGS_FILE):
         df = pd.read_csv(RATINGS_FILE, encoding="utf-8-sig")
@@ -473,13 +503,23 @@ async def submit_ratings(request: Request):
     # 最新のデータで `ratings.csv` を上書き
     df = pd.concat([df, new_ratings], ignore_index=True).drop_duplicates() 
 
-    try:
-        df.to_csv(RATINGS_FILE, index=False, encoding="utf-8-sig")
-        logging.info("ratings.csv successfully updated")  # ✅ ログを追加
-    except Exception as e:
-        logging.error(f"Error writing to ratings.csv: {e}")  # ✅ エラーログを追加
-        return JSONResponse(content={"detail": "Failed to update ratings.csv"}, status_code=500)
     
+    try:
+        # portalocker で排他ロックを取得しながら書き込み
+        with portalocker.Lock(RATINGS_FILE, mode="r+", timeout=5) as fh:
+            fh.seek(0)            # ファイル先頭へ
+            fh.truncate()         # 既存内容を消去
+            df.to_csv(fh, index=False, encoding="utf-8-sig")
+        logging.info("ratings.csv successfully updated with lock")  # ✅ ログ追加
+    except portalocker.exceptions.LockException:
+        logging.error("Failed to acquire file lock for ratings.csv")  # ✅ エラーログ
+        # ロックタイムアウト時は 503 を返す
+        return JSONResponse(content={"detail": "Failed to update ratings due to lock timeout"}, status_code=503)
+    except Exception as e:
+        logging.error(f"Error writing to ratings.csv: {e}")  # ✅ エラーログ
+        return JSONResponse(content={"detail": "Failed to update ratings.csv"}, status_code=500)
+
+
     # 書き込み後に短い遅延を入れる
     await asyncio.sleep(0.1)
     # 更新を反映
@@ -504,6 +544,9 @@ async def update_ratings_no_reload():
     except Exception as e:
         logging.error(f"Error in update_ratings_no_reload(): {e}")
         raise
+
+
+
 
 @app.get("/recommendations")
 async def recommendations_page(request: Request):

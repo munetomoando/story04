@@ -354,6 +354,15 @@ async def add_objects(request: Request, object_names: str = Form(...)):
         writer = csv.writer(file)
         writer.writerows(added_objects)  # まとめて書き込む
 
+    # ──────────────── ここから修正箇所 ────────────────
+    # グローバルの object_dict を再読み込みして最新化する
+    global object_dict
+    import pandas as pd  # ensure pandas is imported
+    objects_df = pd.read_csv(OBJECTS_FILE, encoding="utf-8-sig", dtype={"object_id": str})
+    object_dict.clear()
+    object_dict.update(dict(zip(objects_df["object_id"], objects_df["object_name"])))
+    # ──────────────── 修正箇所ここまで ────────────────
+
     _cached_merged_df, _cached_object_id_to_name, _cached_recommend_df, _cached_user_dict = create_merged_df()
 
     # ✅ メッセージをURLクエリパラメータとして渡す（エンコード処理）

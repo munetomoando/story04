@@ -113,5 +113,10 @@
                 .catch(error => console.error("ユーザー名チェックエラー:", error));
         }
     </script>
+<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#333;color:white;padding:14px 20px;font-size:13px;z-index:10000;text-align:center;line-height:1.6;">
+    このサイトではログイン機能のためにセッションCookieを使用しています。利用を続けることで同意したものとみなします。
+    <button onclick="document.getElementById('cookie-banner').style.display='none';localStorage.setItem('cookie_ok','1')" style="margin-left:12px;background:#2e7d32;color:white;border:none;padding:6px 16px;border-radius:6px;font-size:13px;cursor:pointer;">OK</button>
+</div>
+<script>if(!localStorage.getItem('cookie_ok'))document.getElementById('cookie-banner').style.display='block';</script>
 </body>
 </html>

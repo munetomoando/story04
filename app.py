@@ -47,7 +47,11 @@ from database import get_db, init_db, migrate_from_csv
 # .envファイルの読み込み
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(
+    docs_url="/admin/api-docs",
+    redoc_url=None,
+    openapi_url="/admin/openapi.json",
+)
 
 # レートリミット設定
 limiter = Limiter(key_func=get_remote_address)
@@ -655,6 +659,71 @@ async def help_page(request: Request):
         "username": username,
         "current_group_code": get_user_group_code(request.session.get("user_id")),
     })
+
+
+@app.get("/export_my_data")
+async def export_my_data(request: Request):
+    """ログインユーザー自身のデータを JSON でダウンロード"""
+    import json as _json
+
+    user_id = request.session.get("user_id")
+    username = request.session.get("username")
+    if not user_id:
+        return RedirectResponse(url="/", status_code=303)
+
+    uid = int(user_id)
+    with get_db() as conn:
+        user_row = conn.execute(
+            "SELECT user_id, username, created_at, status, group_code FROM users WHERE user_id = ?",
+            (uid,)
+        ).fetchone()
+
+        ratings = conn.execute(
+            "SELECT object_id, rating, rated_at FROM ratings WHERE user_id = ?", (uid,)
+        ).fetchall()
+
+        reviews = conn.execute(
+            "SELECT review_id, object_id, comment, created_at, deleted_at FROM reviews WHERE user_id = ?", (uid,)
+        ).fetchall()
+
+        login_logs = conn.execute(
+            "SELECT logged_in_at FROM login_logs WHERE user_id = ? ORDER BY logged_in_at DESC", (uid,)
+        ).fetchall()
+
+    data = {
+        "exported_at": datetime.datetime.now().isoformat(),
+        "user": {
+            "user_id": user_row["user_id"],
+            "username": user_row["username"],
+            "created_at": user_row["created_at"],
+            "status": user_row["status"],
+            "group_code": user_row["group_code"],
+        } if user_row else None,
+        "ratings": [
+            {"object_id": r["object_id"], "object_name": object_dict.get(str(r["object_id"]), ""),
+             "rating": r["rating"], "rated_at": r["rated_at"]}
+            for r in ratings
+        ],
+        "reviews": [
+            {"review_id": r["review_id"], "object_id": r["object_id"],
+             "object_name": object_dict.get(str(r["object_id"]), ""),
+             "comment": r["comment"], "created_at": r["created_at"],
+             "deleted": r["deleted_at"] is not None}
+            for r in reviews
+        ],
+        "login_history": [r["logged_in_at"] for r in login_logs],
+    }
+
+    json_bytes = _json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    today = datetime.datetime.now().strftime("%Y%m%d")
+    filename = f"mydata_{username}_{today}.json"
+
+    from starlette.responses import Response
+    return Response(
+        content=json_bytes,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.get("/map")

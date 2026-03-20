@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>レビュー管理画面</title>
+  <title>推薦分析 — 管理者</title>
   <link rel="stylesheet" href="/static/style.css?v=20260320">
   <style>
     /* テーブル全体のスタイル */
@@ -106,16 +106,16 @@
 </style>
 </head>
 <body>
-  <h1>レビュー管理</h1>
+  <h1>推薦分析</h1>
   <div style="margin-bottom:20px;font-size:13px;">
     <a href="/admin/dashboard" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ダッシュボード</a>
-    <span style="color:#bbb;margin-right:16px;">レビュー管理</span>
     <a href="/admin/objects" style="color:#2e7d32;text-decoration:none;margin-right:16px;">店舗管理</a>
-    <a href="/admin/comments" style="color:#2e7d32;text-decoration:none;margin-right:16px;">口コミ管理</a>
     <a href="/admin/users" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ユーザー管理</a>
+    <a href="/admin/comments" style="color:#2e7d32;text-decoration:none;margin-right:16px;">口コミ管理</a>
     <a href="/admin/groups" style="color:#2e7d32;text-decoration:none;margin-right:16px;">グループ管理</a>
-    <a href="/admin/heatmap" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ユーザー分析</a>
-    <a href="/admin/genres" style="color:#2e7d32;text-decoration:none;">ジャンル管理</a>
+    <a href="/admin/genres" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ジャンル管理</a>
+    <span style="color:#bbb;margin-right:16px;">推薦分析</span>
+    <a href="/admin/heatmap" style="color:#2e7d32;text-decoration:none;">ユーザー分析</a>
     <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
   </div>
 

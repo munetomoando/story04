@@ -53,13 +53,13 @@
   <h1>ダッシュボード</h1>
   <div class="nav-links">
     <span class="nav-current">ダッシュボード</span>
-    <a href="/admin/reviews">レビュー管理</a>
     <a href="/admin/objects">店舗管理</a>
-    <a href="/admin/comments">口コミ管理</a>
     <a href="/admin/users">ユーザー管理</a>
+    <a href="/admin/comments">口コミ管理</a>
     <a href="/admin/groups">グループ管理</a>
-    <a href="/admin/heatmap">ユーザー分析</a>
     <a href="/admin/genres">ジャンル管理</a>
+    <a href="/admin/reviews">推薦分析</a>
+    <a href="/admin/heatmap">ユーザー分析</a>
     <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
   </div>
 

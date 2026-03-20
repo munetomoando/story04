@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ジャンル管理 — 管理者</title>
+  <style>
+    body { background: #f4f6f8; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .admin-wrap { max-width: 800px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { color: #1b5e20; font-size: 22px; margin-bottom: 4px; }
+    .nav-links { margin-bottom: 20px; font-size: 13px; }
+    .nav-links a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
+    .nav-links a:hover { text-decoration: underline; }
+    .count-badge {
+      display: inline-block; background: #2e7d32; color: white;
+      font-size: 12px; padding: 2px 10px; border-radius: 12px; margin-left: 8px;
+    }
+    .section-title { font-size: 17px; font-weight: bold; color: #1b5e20; margin: 24px 0 12px; border-left: 4px solid #2e7d32; padding-left: 10px; }
+    .create-form {
+      background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 16px; margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;
+    }
+    .create-form label { font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px; }
+    .create-form input {
+      padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+    }
+    .btn-create { background: #2e7d32; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; }
+    .btn-create:hover { background: #1b5e20; }
+    .genre-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .genre-table th, .genre-table td { border: 1px solid #e0e0e0; padding: 6px 12px; font-size: 13px; }
+    .genre-table th { background: #f4f4f4; font-weight: bold; text-align: center; }
+    .genre-table td { text-align: center; }
+    .td-name { text-align: left !important; font-weight: bold; }
+    .btn-del { background: #dc3545; color: white; border: none; padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+    .btn-del:hover { background: #c82333; }
+    .btn-move {
+      background: white; color: #2e7d32; border: 1px solid #2e7d32;
+      padding: 2px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;
+      line-height: 1;
+    }
+    .btn-move:hover { background: #e8f5e9; }
+    .btn-move:disabled { color: #ccc; border-color: #ddd; cursor: default; background: white; }
+    .action-cell { display: flex; gap: 4px; justify-content: center; align-items: center; }
+    .empty-msg { color: #888; font-size: 13px; }
+    .store-count { color: #888; font-size: 12px; }
+  </style>
+</head>
+<body>
+<div class="admin-wrap">
+  <h1>ジャンル管理 <span class="count-badge">{{ genres | length }}件</span></h1>
+  <div class="nav-links">
+    <a href="/admin/dashboard">ダッシュボード</a>
+    <a href="/admin/reviews">レビュー管理</a>
+    <a href="/admin/objects">店舗管理</a>
+    <a href="/admin/comments">口コミ管理</a>
+    <a href="/admin/users">ユーザー管理</a>
+    <a href="/admin/groups">グループ管理</a>
+    <a href="/admin/heatmap">ユーザー分析</a>
+    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+  </div>
+
+  <div class="section-title">ジャンル追加</div>
+  <form method="post" action="/admin/genres/create" class="create-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <label for="name">ジャンル名</label>
+      <input type="text" name="name" id="name" required placeholder="例: フレンチ" style="width:220px;">
+    </div>
+    <button type="submit" class="btn-create">追加</button>
+  </form>
+
+  <div class="section-title">登録済みジャンル（{{ genres | length }}件）</div>
+  {% if genres %}
+  <table class="genre-table">
+    <thead>
+      <tr>
+        <th style="width:40px;">順序</th>
+        <th>ジャンル名</th>
+        <th>店舗数</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in genres %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td class="td-name">{{ g.name }}</td>
+        <td><span class="store-count">{{ g.store_count }}件</span></td>
+        <td>
+          <div class="action-cell">
+            <form method="post" action="/admin/genres/reorder" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="genre_id" value="{{ g.genre_id }}">
+              <input type="hidden" name="direction" value="up">
+              <button type="submit" class="btn-move" {% if loop.first %}disabled{% endif %}>&#9650;</button>
+            </form>
+            <form method="post" action="/admin/genres/reorder" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="genre_id" value="{{ g.genre_id }}">
+              <input type="hidden" name="direction" value="down">
+              <button type="submit" class="btn-move" {% if loop.last %}disabled{% endif %}>&#9660;</button>
+            </form>
+            <form method="post" action="/admin/genres/delete" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="genre_id" value="{{ g.genre_id }}">
+              <button type="submit" class="btn-del"
+                onclick="return confirm('「{{ g.name }}」を削除しますか？{% if g.store_count > 0 %}\nこのジャンルが設定されている{{ g.store_count }}件の店舗のジャンルがクリアされます。{% endif %}')">削除</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-msg">ジャンルはまだ登録されていません。</p>
+  {% endif %}
+</div>
+</body>
+</html>

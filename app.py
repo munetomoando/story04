@@ -1848,6 +1848,79 @@ async def admin_delete_group(code: str = Form(...)):
     return RedirectResponse(url="/admin/groups", status_code=303)
 
 
+# =============================
+# ジャンル管理（管理者）
+# =============================
+
+@app.get("/admin/genres", response_class=HTMLResponse)
+async def admin_genres_page(request: Request):
+    """ジャンル管理ページ"""
+    with get_db() as conn:
+        genres = conn.execute(
+            "SELECT genre_id, name, sort_order, "
+            "(SELECT COUNT(*) FROM objects o WHERE o.genre = g.name) as store_count "
+            "FROM genres g ORDER BY sort_order, name"
+        ).fetchall()
+
+    return templates.TemplateResponse("admin_genres.html", {
+        "request": request,
+        "genres": [{"genre_id": g["genre_id"], "name": g["name"],
+                    "sort_order": g["sort_order"], "store_count": g["store_count"]}
+                   for g in genres],
+    })
+
+
+@app.post("/admin/genres/create")
+async def admin_create_genre(name: str = Form(...)):
+    """ジャンルを追加"""
+    name = name.strip()
+    if name:
+        with get_db() as conn:
+            max_order = conn.execute("SELECT MAX(sort_order) as m FROM genres").fetchone()["m"] or 0
+            conn.execute(
+                "INSERT OR IGNORE INTO genres (name, sort_order) VALUES (?, ?)",
+                (name, max_order + 1)
+            )
+    return RedirectResponse(url="/admin/genres", status_code=303)
+
+
+@app.post("/admin/genres/delete")
+async def admin_delete_genre(genre_id: int = Form(...)):
+    """ジャンルを削除（使用中の店舗のジャンルは NULL にリセット）"""
+    with get_db() as conn:
+        row = conn.execute("SELECT name FROM genres WHERE genre_id = ?", (genre_id,)).fetchone()
+        if row:
+            conn.execute("UPDATE objects SET genre = NULL WHERE genre = ?", (row["name"],))
+            conn.execute("DELETE FROM genres WHERE genre_id = ?", (genre_id,))
+    return RedirectResponse(url="/admin/genres", status_code=303)
+
+
+@app.post("/admin/genres/reorder")
+async def admin_reorder_genre(genre_id: int = Form(...), direction: str = Form(...)):
+    """ジャンルの並び順を上下に移動"""
+    with get_db() as conn:
+        current = conn.execute("SELECT genre_id, sort_order FROM genres WHERE genre_id = ?", (genre_id,)).fetchone()
+        if not current:
+            return RedirectResponse(url="/admin/genres", status_code=303)
+
+        if direction == "up":
+            neighbor = conn.execute(
+                "SELECT genre_id, sort_order FROM genres WHERE sort_order < ? ORDER BY sort_order DESC LIMIT 1",
+                (current["sort_order"],)
+            ).fetchone()
+        else:
+            neighbor = conn.execute(
+                "SELECT genre_id, sort_order FROM genres WHERE sort_order > ? ORDER BY sort_order ASC LIMIT 1",
+                (current["sort_order"],)
+            ).fetchone()
+
+        if neighbor:
+            conn.execute("UPDATE genres SET sort_order = ? WHERE genre_id = ?", (neighbor["sort_order"], current["genre_id"]))
+            conn.execute("UPDATE genres SET sort_order = ? WHERE genre_id = ?", (current["sort_order"], neighbor["genre_id"]))
+
+    return RedirectResponse(url="/admin/genres", status_code=303)
+
+
 @app.get("/admin/users", response_class=HTMLResponse)
 async def admin_users_page(request: Request, sort: str = "id_asc", page: int = 1):
     """ユーザー管理ページ（ページネーション付き）"""

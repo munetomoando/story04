@@ -48,9 +48,9 @@ from database import get_db, init_db, migrate_from_csv
 load_dotenv()
 
 app = FastAPI(
-    docs_url="/admin/api-docs",
+    docs_url=None,
     redoc_url=None,
-    openapi_url="/admin/openapi.json",
+    openapi_url=None,
 )
 
 # レートリミット設定
@@ -1190,7 +1190,8 @@ async def _background_full_recalc():
         _chart_cache.clear()  # 推薦データ更新時にチャートキャッシュをクリア
         logging.info("Background full recalculation completed")
     except Exception as e:
-        logging.error(f"Background recalculation error: {e}")
+        # キャッシュは更新せず既存データを維持（チャートキャッシュもクリアしない）
+        logging.error(f"Background recalculation failed (existing cache retained): {e}")
 
 
 
@@ -1837,10 +1838,14 @@ async def set_object_location(
 @app.post("/admin/objects/set_genre")
 async def set_object_genre(object_id: str = Form(...), genre: str = Form("")):
     """店舗のジャンルを設定"""
+    try:
+        oid = int(object_id)
+    except (ValueError, TypeError):
+        return RedirectResponse(url="/admin/objects", status_code=303)
     with get_db() as conn:
         conn.execute(
             "UPDATE objects SET genre = ? WHERE object_id = ?",
-            (genre.strip() or None, int(object_id))
+            (genre.strip() or None, oid)
         )
     return RedirectResponse(url="/admin/objects", status_code=303)
 
@@ -2517,6 +2522,23 @@ def _dashboard_query_data(since_date, inactive_threshold_date):
         "few_ratings": few_ratings, "inactive_users": inactive_users,
         "pending_requests": pending_requests, "reported_reviews": reported_reviews,
     }
+
+
+@app.get("/admin/openapi.json")
+async def admin_openapi():
+    """管理者専用 OpenAPI スキーマ（AdminAuthMiddleware で保護済み）"""
+    return JSONResponse(content=app.openapi())
+
+
+@app.get("/admin/api-docs", response_class=HTMLResponse)
+async def admin_api_docs():
+    """管理者専用 Swagger UI（AdminAuthMiddleware で保護済み）"""
+    return HTMLResponse(content=f"""<!DOCTYPE html><html><head><title>API Docs</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+    </head><body><div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>SwaggerUIBundle({{url:'/admin/openapi.json',dom_id:'#swagger-ui'}})</script>
+    </body></html>""")
 
 
 @app.get("/admin/dashboard", response_class=HTMLResponse)

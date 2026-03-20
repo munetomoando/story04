@@ -8,10 +8,10 @@
     body { background: #f4f6f8; font-family: Arial, sans-serif; margin: 0; padding: 0; }
     .admin-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
     h1 { color: #1b5e20; font-size: 22px; margin-bottom: 4px; }
-    .nav-links { margin-bottom: 20px; font-size: 13px; }
-    .nav-links a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
-    .nav-links a:hover { text-decoration: underline; }
-    .nav-links .nav-current { color: #bbb; margin-right: 16px; cursor: default; }
+    .admin-nav { max-width: 1100px; margin: 0 auto; padding: 16px 16px 0; font-size: 13px; }
+    .admin-nav a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
+    .admin-nav a:hover { text-decoration: underline; }
+    .admin-nav .nav-current { color: #bbb; margin-right: 16px; cursor: default; }
     .count-badge {
       display: inline-block; background: #2e7d32; color: white;
       font-size: 12px; padding: 2px 10px; border-radius: 12px; margin-left: 8px;
@@ -78,19 +78,19 @@
   </style>
 </head>
 <body>
+<div class="admin-nav">
+  <a href="/admin/dashboard">ダッシュボード</a>
+  <a href="/admin/objects">店舗管理</a>
+  <span class="nav-current">ユーザー管理</span>
+  <a href="/admin/comments">口コミ管理</a>
+  <a href="/admin/groups">グループ管理</a>
+  <a href="/admin/genres">ジャンル管理</a>
+  <a href="/admin/reviews">推薦分析</a>
+  <a href="/admin/heatmap">ユーザー分析</a>
+  <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+</div>
 <div class="admin-wrap">
   <h1>ユーザー管理 <span class="count-badge">{{ total_count }}人</span></h1>
-  <div class="nav-links">
-    <a href="/admin/dashboard">ダッシュボード</a>
-    <a href="/admin/objects">店舗管理</a>
-    <span class="nav-current">ユーザー管理</span>
-    <a href="/admin/comments">口コミ管理</a>
-    <a href="/admin/groups">グループ管理</a>
-    <a href="/admin/genres">ジャンル管理</a>
-    <a href="/admin/reviews">推薦分析</a>
-    <a href="/admin/heatmap">ユーザー分析</a>
-    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
-  </div>
 
   {% macro sort_header(label, key_asc, key_desc) %}
     {% if current_sort == key_asc %}

@@ -47,6 +47,35 @@
     .report-table th { background: #f4f4f4; font-size: 11px; text-align: center; }
     .report-table td { vertical-align: top; }
     .btn-del-sm { background: #dc3545; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+
+    /* バックアップ・リストア */
+    .backup-section { margin-top: 32px; }
+    .backup-card {
+      background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 16px; margin-bottom: 12px;
+    }
+    .backup-card-title { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px; }
+    .backup-card-desc { font-size: 12px; color: #888; margin-bottom: 12px; line-height: 1.6; }
+    .btn-backup {
+      display: inline-block; background: #1565c0; color: white; border: none;
+      padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: bold;
+      cursor: pointer; text-decoration: none;
+    }
+    .btn-backup:hover { background: #0d47a1; }
+    .btn-restore-submit {
+      background: #e65100; color: white; border: none;
+      padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;
+    }
+    .btn-restore-submit:hover { background: #bf360c; }
+    .restore-warning {
+      background: #fff3e0; border: 1px solid #ffcc80; border-radius: 8px;
+      padding: 10px 14px; font-size: 12px; color: #e65100; margin-bottom: 12px; line-height: 1.6;
+    }
+    .alert-banner {
+      padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; font-weight: bold;
+    }
+    .alert-banner.success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .alert-banner.error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
   </style>
 </head>
 <body>
@@ -63,6 +92,17 @@
 </div></div>
 <div class="admin-wrap">
   <h1>ダッシュボード</h1>
+
+  {% if request.query_params.get('restore_ok') %}
+  <div class="alert-banner success">バックアップからの復元が完了しました。</div>
+  {% endif %}
+  {% if request.query_params.get('restore_error') == 'size' %}
+  <div class="alert-banner error">ファイルサイズが大きすぎます（上限100MB）。</div>
+  {% elif request.query_params.get('restore_error') == 'format' %}
+  <div class="alert-banner error">ZIP ファイルの形式が正しくありません。</div>
+  {% elif request.query_params.get('restore_error') == 'failed' %}
+  <div class="alert-banner error">復元に失敗しました。ログを確認してください。</div>
+  {% endif %}
 
   <!-- ===== 利用状況トレンド ===== -->
   <div class="section-title">利用状況トレンド（{{ period_label }}）</div>
@@ -185,6 +225,34 @@
     {% else %}
     <p style="color:#888;font-size:13px;">通報された口コミはありません。</p>
     {% endif %}
+  </div>
+  <!-- ===== バックアップ・リストア ===== -->
+  <div class="backup-section">
+    <div class="section-title">バックアップ・リストア</div>
+    <div class="backup-card">
+      <div class="backup-card-title">データのバックアップ</div>
+      <div class="backup-card-desc">
+        データベース（ユーザー・評価・口コミ・推薦データ等すべて）と店舗画像を ZIP ファイルとしてダウンロードします。<br>
+        定期的にダウンロードしてローカルに保管することを推奨します。
+      </div>
+      <a href="/admin/backup" class="btn-backup">バックアップをダウンロード</a>
+    </div>
+    <div class="backup-card">
+      <div class="backup-card-title">バックアップからの復元</div>
+      <div class="backup-card-desc">
+        上記でダウンロードした ZIP ファイルをアップロードして、データを復元します。
+      </div>
+      <div class="restore-warning">
+        この操作は現在のデータベースと店舗画像を上書きします。復元前に現在のバックアップをダウンロードしておくことを強く推奨します。
+      </div>
+      <form method="post" action="/admin/restore" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="file" name="backup_file" accept=".zip" required
+               style="display:block;margin-bottom:10px;font-size:13px;">
+        <button type="submit" class="btn-restore-submit"
+                onclick="return confirm('現在のデータが上書きされます。復元を実行しますか？')">復元を実行</button>
+      </form>
+    </div>
   </div>
 </div>
 </body>

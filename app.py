@@ -2378,6 +2378,126 @@ async def admin_dashboard(request: Request, period: str = "30"):
     })
 
 
+# =============================
+# バックアップ・リストア（管理者）
+# =============================
+
+@app.get("/admin/backup")
+async def admin_backup():
+    """DB と店舗画像を ZIP にまとめてダウンロード"""
+    import zipfile
+    import shutil
+
+    today = datetime.datetime.now().strftime("%Y%m%d")
+    zip_filename = f"lunchmap_backup_{today}.zip"
+
+    buf = BytesIO()
+    db_path = DATA_DIR / "lunchmap.db"
+
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        # DB ファイル（WAL をフラッシュしてから安全にコピー）
+        if db_path.exists():
+            # VACUUM INTO で一貫性のあるスナップショットを作成
+            snapshot_path = DATA_DIR / "lunchmap_backup_tmp.db"
+            try:
+                import sqlite3 as _sqlite3
+                src = _sqlite3.connect(str(db_path), timeout=30)
+                src.execute(f"VACUUM INTO '{snapshot_path}'")
+                src.close()
+                zf.write(snapshot_path, "lunchmap.db")
+                snapshot_path.unlink()
+            except Exception:
+                # フォールバック: 直接コピー
+                zf.write(db_path, "lunchmap.db")
+                if snapshot_path.exists():
+                    snapshot_path.unlink()
+
+        # 店舗画像
+        if STORE_IMAGES_DIR.exists():
+            for img_file in STORE_IMAGES_DIR.iterdir():
+                if img_file.is_file():
+                    zf.write(img_file, f"store_images/{img_file.name}")
+
+        # セッション秘密鍵
+        key_file = DATA_DIR / ".session_secret_key"
+        if key_file.exists():
+            zf.write(key_file, ".session_secret_key")
+
+    buf.seek(0)
+    from starlette.responses import Response
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_filename}"'},
+    )
+
+
+@app.post("/admin/restore")
+async def admin_restore(request: Request, backup_file: UploadFile = File(...)):
+    """ZIP バックアップからデータを復元"""
+    import zipfile
+
+    content = await backup_file.read()
+    MAX_BACKUP_SIZE = 100 * 1024 * 1024  # 100MB
+    if len(content) > MAX_BACKUP_SIZE:
+        return RedirectResponse(url="/admin/dashboard?restore_error=size", status_code=303)
+
+    buf = BytesIO(content)
+    if not zipfile.is_zipfile(buf):
+        return RedirectResponse(url="/admin/dashboard?restore_error=format", status_code=303)
+
+    buf.seek(0)
+    try:
+        with zipfile.ZipFile(buf, "r") as zf:
+            names = zf.namelist()
+
+            # DB ファイルの復元
+            if "lunchmap.db" in names:
+                db_path = DATA_DIR / "lunchmap.db"
+                # 既存 DB のバックアップ
+                if db_path.exists():
+                    backup_existing = DATA_DIR / "lunchmap_pre_restore.db"
+                    import shutil
+                    shutil.copy2(db_path, backup_existing)
+
+                # WAL/SHM を削除してからDB を上書き
+                for ext in ["-wal", "-shm"]:
+                    wal_file = DATA_DIR / f"lunchmap.db{ext}"
+                    if wal_file.exists():
+                        wal_file.unlink()
+
+                with open(db_path, "wb") as f:
+                    f.write(zf.read("lunchmap.db"))
+                logging.info("Restored lunchmap.db from backup")
+
+            # 店舗画像の復元
+            for name in names:
+                if name.startswith("store_images/") and not name.endswith("/"):
+                    img_name = pathlib.Path(name).name
+                    # ファイル名のバリデーション（パストラバーサル防止）
+                    if ".." in img_name or "/" in img_name:
+                        continue
+                    STORE_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+                    with open(STORE_IMAGES_DIR / img_name, "wb") as f:
+                        f.write(zf.read(name))
+                    logging.info(f"Restored store image: {img_name}")
+
+            # セッション秘密鍵の復元
+            if ".session_secret_key" in names:
+                with open(DATA_DIR / ".session_secret_key", "wb") as f:
+                    f.write(zf.read(".session_secret_key"))
+                logging.info("Restored session secret key from backup")
+
+        # DB を再初期化
+        from database import init_db
+        init_db()
+
+        return RedirectResponse(url="/admin/dashboard?restore_ok=1", status_code=303)
+    except Exception as e:
+        logging.error(f"Restore failed: {e}")
+        return RedirectResponse(url="/admin/dashboard?restore_error=failed", status_code=303)
+
+
 @app.post("/report_review")
 @limiter.limit("5/minute")
 async def report_review(request: Request, review_id: int = Form(...), reason: str = Form("")):

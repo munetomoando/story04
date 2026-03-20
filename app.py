@@ -127,7 +127,16 @@ def _load_admin_hash():
         if _hash_file.exists():
             ADMIN_PASSWORD_HASH = _hash_file.read_text().strip()
 
+def _load_invite_code():
+    """環境変数に設定がなければファイルから読み込み"""
+    global INVITE_CODE
+    if not INVITE_CODE:
+        _code_file = pathlib.Path(os.getenv("DATA_DIR", "/data")) / ".invite_code"
+        if _code_file.exists():
+            INVITE_CODE = _code_file.read_text().strip()
+
 _load_admin_hash()
+_load_invite_code()
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import RedirectResponse as StarletteRedirect
@@ -2690,12 +2699,27 @@ async def admin_dashboard(request: Request, period: str = "30"):
             }
             for r in data["reported_reviews"]
         ],
+        "invite_code": INVITE_CODE,
     })
 
 
 # =============================
 # バックアップ・リストア（管理者）
 # =============================
+
+@app.post("/admin/set_invite_code")
+async def admin_set_invite_code(request: Request, invite_code: str = Form("")):
+    """招待コードの設定・変更・削除"""
+    global INVITE_CODE
+    new_code = invite_code.strip()
+    INVITE_CODE = new_code
+    # ファイルに永続化
+    _code_file = DATA_DIR / ".invite_code"
+    _code_file.parent.mkdir(parents=True, exist_ok=True)
+    _code_file.write_text(new_code)
+    logging.info(f"Invite code {'set' if new_code else 'cleared'} by admin")
+    return RedirectResponse(url="/admin/dashboard?invite_updated=1", status_code=303)
+
 
 @app.get("/admin/backup")
 async def admin_backup():

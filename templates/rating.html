@@ -255,7 +255,7 @@ function updateProgress() {
 function buildCard(obj, extraClass) {
     const saved = selections[obj.id];
     const imgHtml = obj.image_url
-        ? `<img src="${obj.image_url}" class="card-store-img" alt="${obj.name}">`
+        ? `<img src="${obj.image_url}" class="card-store-img" alt="${obj.name}" loading="lazy">`
         : '';
     return `
         <div class="rating-card ${extraClass || ''}" id="card-${obj.id}">

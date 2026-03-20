@@ -317,7 +317,7 @@
     <a href="#" class="back-btn" onclick="history.back(); return false;">← 戻る</a>
 
     {% if store.image_url %}
-    <img src="{{ store.image_url }}" alt="{{ store.object_name }}" class="store-hero">
+    <img src="{{ store.image_url }}" alt="{{ store.object_name }}" class="store-hero" loading="lazy">
     {% else %}
     <div class="store-hero-placeholder">🍽️</div>
     {% endif %}

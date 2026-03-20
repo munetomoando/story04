@@ -182,7 +182,7 @@
       <!-- 画像表示エリア -->
       <div class="store-img-wrap">
         {% if obj.image_url %}
-          <img src="{{ obj.image_url }}" alt="{{ obj.object_name }}">
+          <img src="{{ obj.image_url }}" alt="{{ obj.object_name }}" loading="lazy">
         {% else %}
           <span class="store-img-placeholder">🍽️</span>
         {% endif %}

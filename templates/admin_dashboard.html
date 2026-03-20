@@ -100,6 +100,8 @@
   <div class="alert-banner error">ファイルサイズが大きすぎます（上限100MB）。</div>
   {% elif request.query_params.get('restore_error') == 'format' %}
   <div class="alert-banner error">ZIP ファイルの形式が正しくありません。</div>
+  {% elif request.query_params.get('restore_error') == 'corrupt' %}
+  <div class="alert-banner error">バックアップファイルが破損しています。DBの整合性チェックに失敗しました。</div>
   {% elif request.query_params.get('restore_error') == 'failed' %}
   <div class="alert-banner error">復元に失敗しました。ログを確認してください。</div>
   {% endif %}

@@ -147,7 +147,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 import re as _csrf_re
                 token = ""
                 match = _csrf_re.search(
-                    rb'name="csrf_token"\r?\n\r?\n([^\r\n-]+)',
+                    rb'name="csrf_token"\r?\n\r?\n([^\r\n]+)',
                     body,
                 )
                 if match:
@@ -532,7 +532,8 @@ def get_recommendations(request: Request, user_id: str):
     })
 
 @app.get("/check_username")
-def check_username(username: str = Query(...)):
+@limiter.limit("20/minute")
+async def check_username(request: Request, username: str = Query(...)):
     """ユーザー名の重複チェックAPI"""
     with get_db() as conn:
         row = conn.execute("SELECT 1 FROM users WHERE username = ?", (username,)).fetchone()
@@ -2503,8 +2504,11 @@ async def admin_backup():
 
 @app.post("/admin/restore")
 async def admin_restore(request: Request, backup_file: UploadFile = File(...)):
-    """ZIP バックアップからデータを復元"""
+    """ZIP バックアップからデータを復元（一時展開→検証→差し替え方式）"""
     import zipfile
+    import shutil
+    import tempfile
+    import sqlite3 as _sqlite3
 
     content = await backup_file.read()
     MAX_BACKUP_SIZE = 100 * 1024 * 1024  # 100MB
@@ -2516,48 +2520,79 @@ async def admin_restore(request: Request, backup_file: UploadFile = File(...)):
         return RedirectResponse(url="/admin/dashboard?restore_error=format", status_code=303)
 
     buf.seek(0)
+    # 一時ディレクトリに展開して検証
+    tmp_dir = pathlib.Path(tempfile.mkdtemp(prefix="lunchmap_restore_"))
     try:
         with zipfile.ZipFile(buf, "r") as zf:
             names = zf.namelist()
 
-            # DB ファイルの復元
+            # --- Phase 1: 一時ディレクトリに展開 ---
+            tmp_db = None
             if "lunchmap.db" in names:
-                db_path = DATA_DIR / "lunchmap.db"
-                # 既存 DB のバックアップ
-                if db_path.exists():
-                    backup_existing = DATA_DIR / "lunchmap_pre_restore.db"
-                    import shutil
-                    shutil.copy2(db_path, backup_existing)
-
-                # WAL/SHM を削除してからDB を上書き
-                for ext in ["-wal", "-shm"]:
-                    wal_file = DATA_DIR / f"lunchmap.db{ext}"
-                    if wal_file.exists():
-                        wal_file.unlink()
-
-                with open(db_path, "wb") as f:
+                tmp_db = tmp_dir / "lunchmap.db"
+                with open(tmp_db, "wb") as f:
                     f.write(zf.read("lunchmap.db"))
-                logging.info("Restored lunchmap.db from backup")
 
-            # 店舗画像の復元
+            tmp_images = []
             for name in names:
                 if name.startswith("store_images/") and not name.endswith("/"):
                     img_name = pathlib.Path(name).name
-                    # ファイル名のバリデーション（パストラバーサル防止）
                     if ".." in img_name or "/" in img_name:
                         continue
-                    STORE_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-                    with open(STORE_IMAGES_DIR / img_name, "wb") as f:
+                    tmp_img = tmp_dir / img_name
+                    with open(tmp_img, "wb") as f:
                         f.write(zf.read(name))
-                    logging.info(f"Restored store image: {img_name}")
+                    tmp_images.append((tmp_img, img_name))
 
-            # セッション秘密鍵の復元
+            tmp_key = None
             if ".session_secret_key" in names:
-                with open(DATA_DIR / ".session_secret_key", "wb") as f:
+                tmp_key = tmp_dir / ".session_secret_key"
+                with open(tmp_key, "wb") as f:
                     f.write(zf.read(".session_secret_key"))
-                logging.info("Restored session secret key from backup")
 
-        # DB を再初期化
+        # --- Phase 2: DB の整合性を検証 ---
+        if tmp_db and tmp_db.exists():
+            try:
+                test_conn = _sqlite3.connect(str(tmp_db))
+                test_conn.execute("SELECT COUNT(*) FROM users")
+                test_conn.execute("PRAGMA integrity_check")
+                test_conn.close()
+            except Exception as e:
+                logging.error(f"Restore aborted: backup DB integrity check failed: {e}")
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                return RedirectResponse(url="/admin/dashboard?restore_error=corrupt", status_code=303)
+
+        # --- Phase 3: 検証成功、既存データを退避してから差し替え ---
+        db_path = DATA_DIR / "lunchmap.db"
+
+        if tmp_db and tmp_db.exists():
+            # 既存 DB を退避
+            if db_path.exists():
+                backup_existing = DATA_DIR / "lunchmap_pre_restore.db"
+                shutil.copy2(db_path, backup_existing)
+
+            # WAL/SHM を削除
+            for ext in ["-wal", "-shm"]:
+                wal_file = DATA_DIR / f"lunchmap.db{ext}"
+                if wal_file.exists():
+                    wal_file.unlink()
+
+            # 検証済み DB を本番パスに移動
+            shutil.move(str(tmp_db), str(db_path))
+            logging.info("Restored lunchmap.db from backup (integrity verified)")
+
+        # 店舗画像を復元
+        STORE_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+        for tmp_img, img_name in tmp_images:
+            shutil.move(str(tmp_img), str(STORE_IMAGES_DIR / img_name))
+            logging.info(f"Restored store image: {img_name}")
+
+        # セッション秘密鍵を復元
+        if tmp_key and tmp_key.exists():
+            shutil.move(str(tmp_key), str(DATA_DIR / ".session_secret_key"))
+            logging.info("Restored session secret key from backup")
+
+        # DB を再初期化（マイグレーション適用）
         from database import init_db
         init_db()
 
@@ -2565,6 +2600,8 @@ async def admin_restore(request: Request, backup_file: UploadFile = File(...)):
     except Exception as e:
         logging.error(f"Restore failed: {e}")
         return RedirectResponse(url="/admin/dashboard?restore_error=failed", status_code=303)
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 @app.post("/report_review")

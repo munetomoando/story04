@@ -27,4 +27,4 @@ primary_region = 'nrt'
 [[vm]]
   cpu_kind = "shared"
   cpus = 1
-  memory = 256
+  memory = 512

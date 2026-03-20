@@ -11,6 +11,7 @@
     .nav-links { margin-bottom: 20px; font-size: 13px; }
     .nav-links a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
     .nav-links a:hover { text-decoration: underline; }
+    .nav-links .nav-current { color: #bbb; margin-right: 16px; cursor: default; }
     .section-title { font-size: 17px; font-weight: bold; color: #1b5e20; margin: 24px 0 12px; border-left: 4px solid #2e7d32; padding-left: 10px; }
     .create-form {
       background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -42,6 +43,7 @@
     <a href="/admin/objects">店舗管理</a>
     <a href="/admin/comments">口コミ管理</a>
     <a href="/admin/users">ユーザー管理</a>
+    <span class="nav-current">グループ管理</span>
     <a href="/admin/heatmap">ユーザー分析</a>
     <a href="/admin/genres">ジャンル管理</a>
     <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>

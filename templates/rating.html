@@ -475,6 +475,7 @@ function saveToSession() {
     <div class="logout-card">
         <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
         <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
+        <div id="group-error-msg" style="display:none;background:#ffebee;color:#c62828;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:10px;">このグループコードは存在しません。</div>
         <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="text" name="group_code" placeholder="グループコード"
                 value="{{ current_group_code or '' }}"
@@ -497,5 +498,6 @@ function saveToSession() {
         </div>
     </div>
 </div>
+<script>if(new URLSearchParams(location.search).has('group_error')){document.getElementById('group-code-modal').classList.add('open');document.getElementById('group-error-msg').style.display='block';}</script>
 </body>
 </html>

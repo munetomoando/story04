@@ -93,6 +93,14 @@
 <div class="admin-wrap">
   <h1>ユーザー管理 <span class="count-badge">{{ total_count }}人</span></h1>
 
+  {% if request.query_params.get('reset_pw') %}
+  <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1b5e20;">
+    <strong>パスワードをリセットしました。</strong><br>
+    ユーザーID {{ request.query_params.get('reset_uid') }} の仮パスワード: <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:15px;font-weight:bold;user-select:all;">{{ request.query_params.get('reset_pw') }}</code><br>
+    <span style="color:#888;font-size:11px;">このパスワードをユーザーに伝えてください。この表示は一度だけです。</span>
+  </div>
+  {% endif %}
+
   {% macro sort_header(label, key_asc, key_desc) %}
     {% if current_sort == key_asc %}
       <a href="/admin/users?sort={{ key_desc }}" class="sort-link sort-active">{{ label }} <span class="sort-arrow">▲</span></a>
@@ -160,6 +168,10 @@
                   <button type="submit" class="btn-sm btn-warn" onclick="return confirm('{{ u.username }} に警告を付与しますか？')">警告</button>
                 </form>
               {% endif %}
+              <form method="post" action="/admin/users/reset_password" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="user_id" value="{{ u.user_id }}">
+                <button type="submit" class="btn-sm" style="background:#1565c0;color:white;" onclick="return confirm('{{ u.username }} のパスワードをリセットしますか？')">PW</button>
+              </form>
             </div>
           </td>
         </tr>

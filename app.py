@@ -1305,7 +1305,7 @@ def create_merged_df(recommend_df=None):
     return merged_df, object_id_to_name, recommend_df, _cached_user_dict
 
 @app.get("/admin/reviews", response_class=HTMLResponse)
-async def admin_reviews(request: Request):
+async def admin_reviews(request: Request, page: int = 1):
     global _cached_merged_df, _cached_object_id_to_name, _cached_recommend_df, _cached_user_dict, user_similarity
 
     with _recommend_lock:
@@ -1330,6 +1330,13 @@ async def admin_reviews(request: Request):
     else:
         recommendation_hist_base64, pivot_compact, object_name_cols = heatmap_result
 
+    # ページネーション（ユーザー行単位）
+    page = max(1, page)
+    total_rows = len(pivot_compact)
+    total_pages = max(1, (total_rows + _ADMIN_PAGE_SIZE - 1) // _ADMIN_PAGE_SIZE)
+    offset = (page - 1) * _ADMIN_PAGE_SIZE
+    pivot_page = pivot_compact.iloc[offset:offset + _ADMIN_PAGE_SIZE] if not pivot_compact.empty else pivot_compact
+
     # pending リクエスト一覧を取得
     requests_df = _load_requests()
     pending_requests = requests_df[requests_df["status"] == "pending"].to_dict(orient="records") if not requests_df.empty else []
@@ -1340,9 +1347,12 @@ async def admin_reviews(request: Request):
         {
             "request": request,
             "pending_requests": pending_requests,
-            "pivot_table": pivot_compact.to_dict(orient="records"),
+            "pivot_table": pivot_page.to_dict(orient="records"),
             "column_names": object_name_cols,
             "recommendation_hist_base64": recommendation_hist_base64,
+            "current_page": page,
+            "total_pages": total_pages,
+            "total_rows": total_rows,
         },
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
     )
@@ -1771,6 +1781,9 @@ async def set_object_genre(object_id: str = Form(...), genre: str = Form("")):
 @app.post("/admin/objects/upload_image")
 async def upload_store_image(object_id: str = Form(...), image: UploadFile = File(...)):
     """店舗画像をアップロード"""
+    with get_db() as conn:
+        if not conn.execute("SELECT 1 FROM objects WHERE object_id = ?", (int(object_id),)).fetchone():
+            return RedirectResponse(url="/admin/objects", status_code=303)
     STORE_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     ext = image.filename.rsplit(".", 1)[-1].lower() if "." in image.filename else "jpg"
     if ext not in {"jpg", "jpeg", "png", "gif", "webp"}:
@@ -2090,6 +2103,21 @@ async def admin_restore_user(user_id: int = Form(...)):
     with get_db() as conn:
         conn.execute("UPDATE users SET status = 'active' WHERE user_id = ?", (user_id,))
     return RedirectResponse(url="/admin/users", status_code=303)
+
+
+@app.post("/admin/users/reset_password")
+async def admin_reset_password(user_id: int = Form(...)):
+    """管理者がユーザーのパスワードをリセット（仮パスワードを設定）"""
+    import string
+    import random
+    # 8文字の仮パスワードを生成（英字+数字+記号）
+    chars = string.ascii_letters + string.digits
+    temp_pw = ''.join(random.choices(chars, k=6)) + random.choice("@$!%*#?&") + random.choice(string.digits)
+    pw_hash = bcrypt.hashpw(temp_pw.encode(), bcrypt.gensalt()).decode()
+    with get_db() as conn:
+        conn.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (pw_hash, user_id))
+    logging.info(f"Password reset for user_id={user_id}")
+    return RedirectResponse(url=f"/admin/users?reset_pw={temp_pw}&reset_uid={user_id}", status_code=303)
 
 
 @app.get("/admin/comments", response_class=HTMLResponse)

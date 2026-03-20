@@ -361,7 +361,7 @@
         {% if comments %}
         <ul class="comment-list">
             {% for c in comments %}
-            <li class="comment-card">
+            <li class="comment-card" {% if loop.index > 5 %}style="display:none;" data-extra-comment{% endif %}>
                 <div class="comment-header">
                     <span class="comment-date">{{ c.created_at }}</span>
                     {% if c.is_mine %}<span class="comment-mine-badge">自分の投稿</span>{% endif %}
@@ -385,6 +385,12 @@
             </li>
             {% endfor %}
         </ul>
+        {% if comments | length > 5 %}
+        <button id="show-more-comments" onclick="document.querySelectorAll('[data-extra-comment]').forEach(e=>e.style.display='');this.style.display='none';"
+                style="display:block;width:100%;padding:10px;margin-top:8px;background:white;border:1px solid #a5d6a7;border-radius:8px;color:#2e7d32;font-size:13px;font-weight:bold;cursor:pointer;text-align:center;">
+            残り{{ comments | length - 5 }}件の口コミを表示
+        </button>
+        {% endif %}
         {% else %}
         <div class="comment-empty">まだ口コミがありません。最初の投稿者になりましょう！</div>
         {% endif %}
@@ -432,6 +438,7 @@ L.marker([lat, lng]).addTo(map);
     <div class="logout-card">
         <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
         <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
+        <div id="group-error-msg" style="display:none;background:#ffebee;color:#c62828;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:10px;">このグループコードは存在しません。</div>
         <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="text" name="group_code" placeholder="グループコード"
                 value="{{ current_group_code or '' }}"
@@ -532,5 +539,6 @@ if (new URLSearchParams(location.search).get('reported') === '1') {
         </div>
     </div>
 </div>
+<script>if(new URLSearchParams(location.search).has('group_error')){document.getElementById('group-code-modal').classList.add('open');document.getElementById('group-error-msg').style.display='block';}</script>
 </body>
 </html>

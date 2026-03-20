@@ -207,6 +207,20 @@
     </table>
   </div>
 
+  {% if total_pages > 1 %}
+  <div style="display:flex;justify-content:center;align-items:center;gap:4px;margin:16px 0;flex-wrap:wrap;">
+    <span style="color:#888;font-size:12px;">{{ current_page }}/{{ total_pages }}ページ（{{ total_rows }}ユーザー）</span>
+    {% if current_page > 1 %}
+      <a href="/admin/reviews?page=1" style="padding:4px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-decoration:none;color:#2e7d32;background:white;">&laquo;</a>
+      <a href="/admin/reviews?page={{ current_page - 1 }}" style="padding:4px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-decoration:none;color:#2e7d32;background:white;">&lsaquo;</a>
+    {% endif %}
+    {% if current_page < total_pages %}
+      <a href="/admin/reviews?page={{ current_page + 1 }}" style="padding:4px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-decoration:none;color:#2e7d32;background:white;">&rsaquo;</a>
+      <a href="/admin/reviews?page={{ total_pages }}" style="padding:4px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-decoration:none;color:#2e7d32;background:white;">&raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
     <h2>推薦スコアの分布とカーネル密度推定</h2>
     <img src="data:image/png;base64,{{ recommendation_hist_base64 | safe }}" alt="推薦スコアのヒストグラム">
 

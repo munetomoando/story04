@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ヘルプ — ランチマップ</title>
+    <title>ヘルプ — {{ app_name }}</title>
     <link rel="stylesheet" href="/static/style.css?v=20260320">
     <style>
         .help-main { max-width: 640px; margin: 52px auto 0; padding: 20px 16px 100px; text-align: left; }
@@ -37,7 +37,7 @@
 <body class="app-page">
 
 <header class="app-header">
-    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">神田三崎町ランチマップ</a>
+    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">{{ app_name }}</a>
     <span class="header-user" onclick="this.querySelector('.header-user-menu').classList.toggle('open')">
         {{ username }} ▾
         <div class="header-user-menu" id="user-menu">
@@ -53,8 +53,8 @@
 <main class="help-main">
 
     <section class="help-section">
-        <h2>ランチマップの使い方</h2>
-        <p>神田三崎町ランチマップは、みんなの評価をもとにあなたに合うお店を見つけるアプリです。</p>
+        <h2>{{ app_name }}の使い方</h2>
+        <p>{{ app_name }}は、みんなの評価をもとにあなたに合うお店を見つけるアプリです。</p>
         <ul>
             <li><strong>評価ページ</strong> — お店を1〜5点で評価します。知らないお店はスキップできます。</li>
             <li><strong>おすすめページ</strong> — あなたの好みに合いそうなお店を自動で提案します。</li>

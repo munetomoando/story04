@@ -562,6 +562,15 @@ async def show_register_page(request: Request):
 @limiter.limit("5/minute")
 async def register_user(request: Request, username: str = Form(...), pw: str = Form(alias="password"), invite_code: str = Form("")):
     """新規ユーザー登録処理"""
+    # ユーザー名バリデーション（サーバー側）
+    import re as _re
+    username = username.strip()
+    if not username or len(username) > 32 or not _re.fullmatch(r'[a-zA-Z0-9]+', username):
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "error_message": "ユーザー名は1〜32文字の英数字のみ使用できます。",
+        })
+
     # 招待コードチェック
     if INVITE_CODE and invite_code.strip() != INVITE_CODE:
         return templates.TemplateResponse("register.html", {
@@ -1811,12 +1820,16 @@ async def set_object_location(
     longitude: str = Form(""),
 ):
     """店舗の緯度経度を設定"""
-    lat = float(latitude) if latitude.strip() else None
-    lng = float(longitude) if longitude.strip() else None
+    try:
+        lat = float(latitude) if latitude.strip() else None
+        lng = float(longitude) if longitude.strip() else None
+        oid = int(object_id)
+    except (ValueError, TypeError):
+        return RedirectResponse(url="/admin/objects", status_code=303)
     with get_db() as conn:
         conn.execute(
             "UPDATE objects SET latitude = ?, longitude = ? WHERE object_id = ?",
-            (lat, lng, int(object_id))
+            (lat, lng, oid)
         )
     return RedirectResponse(url="/admin/objects", status_code=303)
 
@@ -1835,21 +1848,25 @@ async def set_object_genre(object_id: str = Form(...), genre: str = Form("")):
 @app.post("/admin/objects/upload_image")
 async def upload_store_image(object_id: str = Form(...), image: UploadFile = File(...)):
     """店舗画像をアップロード"""
+    try:
+        safe_id = str(int(object_id))
+    except (ValueError, TypeError):
+        return RedirectResponse(url="/admin/objects", status_code=303)
     with get_db() as conn:
-        if not conn.execute("SELECT 1 FROM objects WHERE object_id = ?", (int(object_id),)).fetchone():
+        if not conn.execute("SELECT 1 FROM objects WHERE object_id = ?", (int(safe_id),)).fetchone():
             return RedirectResponse(url="/admin/objects", status_code=303)
     STORE_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     ext = image.filename.rsplit(".", 1)[-1].lower() if "." in image.filename else "jpg"
     if ext not in {"jpg", "jpeg", "png", "gif", "webp"}:
         ext = "jpg"
     # 同じ object_id の既存画像を削除
-    for old in STORE_IMAGES_DIR.glob(f"{object_id}.*"):
+    for old in STORE_IMAGES_DIR.glob(f"{safe_id}.*"):
         old.unlink()
     content = await image.read()
     MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
     if len(content) > MAX_IMAGE_SIZE:
         return RedirectResponse(url="/admin/objects", status_code=303)
-    with open(STORE_IMAGES_DIR / f"{object_id}.{ext}", "wb") as f:
+    with open(STORE_IMAGES_DIR / f"{safe_id}.{ext}", "wb") as f:
         f.write(content)
     return RedirectResponse(url="/admin/objects", status_code=303)
 
@@ -1857,7 +1874,11 @@ async def upload_store_image(object_id: str = Form(...), image: UploadFile = Fil
 @app.post("/admin/objects/delete_image")
 async def delete_store_image(object_id: str = Form(...)):
     """店舗画像を削除"""
-    for f in STORE_IMAGES_DIR.glob(f"{object_id}.*"):
+    try:
+        safe_id = str(int(object_id))  # 数値以外を拒否（glob インジェクション防止）
+    except (ValueError, TypeError):
+        return RedirectResponse(url="/admin/objects", status_code=303)
+    for f in STORE_IMAGES_DIR.glob(f"{safe_id}.*"):
         f.unlink()
     return RedirectResponse(url="/admin/objects", status_code=303)
 
@@ -1865,13 +1886,17 @@ async def delete_store_image(object_id: str = Form(...)):
 @app.post("/admin/objects/delete")
 async def delete_object(object_id: str = Form(...)):
     """店舗を削除（関連する評価・推薦スコアも削除）"""
-    oid = int(object_id)
+    try:
+        oid = int(object_id)
+    except (ValueError, TypeError):
+        return RedirectResponse(url="/admin/objects", status_code=303)
+    safe_id = str(oid)
     with get_db() as conn:
         conn.execute("DELETE FROM ratings WHERE object_id = ?", (oid,))
         conn.execute("DELETE FROM recommendations WHERE object_id = ?", (oid,))
         conn.execute("DELETE FROM objects WHERE object_id = ?", (oid,))
-    object_dict.pop(object_id, None)
-    for f in STORE_IMAGES_DIR.glob(f"{object_id}.*"):
+    object_dict.pop(safe_id, None)
+    for f in STORE_IMAGES_DIR.glob(f"{safe_id}.*"):
         f.unlink()
     logging.info(f"Deleted object_id={object_id} and related data")
     return RedirectResponse(url="/admin/objects", status_code=303)
@@ -2161,8 +2186,12 @@ async def admin_ban_user(user_id: int = Form(...)):
 
 
 @app.post("/admin/users/delete")
-async def admin_delete_user(user_id: int = Form(...)):
-    """ユーザーを削除（banned ユーザーのみ）"""
+async def admin_delete_user(request: Request, user_id: int = Form(...)):
+    """ユーザーを削除（banned ユーザーのみ、自分自身は削除不可）"""
+    # 管理者がユーザーとしてもログインしている場合、自己削除を防止
+    session_uid = request.session.get("user_id")
+    if session_uid and int(session_uid) == user_id:
+        return RedirectResponse(url="/admin/users", status_code=303)
     with get_db() as conn:
         status = conn.execute("SELECT status FROM users WHERE user_id = ?", (user_id,)).fetchone()
         if status and status["status"] == "banned":
@@ -2331,7 +2360,14 @@ async def admin_login(request: Request, username: str = Form(...), password: str
         return templates.TemplateResponse("admin_login.html", {
             "request": request, "error": "ユーザー名またはパスワードが間違っています。"
         })
-    if not bcrypt.checkpw(password.encode(), ADMIN_PASSWORD_HASH.encode()):
+    try:
+        pw_ok = bcrypt.checkpw(password.encode(), ADMIN_PASSWORD_HASH.encode())
+    except (ValueError, TypeError):
+        logging.error("ADMIN_PASSWORD_HASH is not a valid bcrypt hash")
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request, "error": "管理者アカウントの設定に問題があります。"
+        })
+    if not pw_ok:
         return templates.TemplateResponse("admin_login.html", {
             "request": request, "error": "ユーザー名またはパスワードが間違っています。"
         })

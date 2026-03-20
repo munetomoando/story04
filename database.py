@@ -94,7 +94,7 @@ def init_db():
         );
         CREATE INDEX IF NOT EXISTS idx_login_logs_at ON login_logs(logged_in_at);
         CREATE INDEX IF NOT EXISTS idx_page_views_at ON page_views(viewed_at);
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_one_review_per_user_object ON reviews(user_id, object_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_one_active_review_per_user_object ON reviews(user_id, object_id) WHERE deleted_at IS NULL;
         CREATE INDEX IF NOT EXISTS idx_reviews_deleted ON reviews(deleted_at);
         CREATE TABLE IF NOT EXISTS group_codes (
             code       TEXT PRIMARY KEY,
@@ -124,6 +124,12 @@ def init_db():
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError:
             pass  # カラムが既に存在する場合は無視
+
+    # 旧ユニークインデックスを削除（soft-delete 対応のため部分インデックスに移行）
+    try:
+        conn.execute("DROP INDEX IF EXISTS idx_one_review_per_user_object")
+    except sqlite3.OperationalError:
+        pass
 
     # ジャンルの初期データ投入（テーブルが空の場合のみ）
     if conn.execute("SELECT COUNT(*) FROM genres").fetchone()[0] == 0:

@@ -451,7 +451,11 @@ async def login(request: Request, username: str = Form(...), password: str = For
             "error_message": "このアカウントは利用できません。"
         })
 
-    if not bcrypt.checkpw(password.encode(), row["password_hash"].encode()):
+    try:
+        pw_ok = bcrypt.checkpw(password.encode(), row["password_hash"].encode())
+    except (ValueError, TypeError):
+        pw_ok = False
+    if not pw_ok:
         return templates.TemplateResponse("index.html", {
             "request": request,
             "error_message": "パスワードが間違っています。"
@@ -615,6 +619,8 @@ def is_object_exists(object_name: str) -> bool:
 
 @app.get("/add_objects", response_class=HTMLResponse)
 async def show_add_objects_page(request: Request, success: bool = False, message: str = ""):
+    if not request.session.get("user_id"):
+        return RedirectResponse(url="/", status_code=303)
     messages = [message] if success and message else []
     return templates.TemplateResponse(
         "add_objects.html",
@@ -627,6 +633,8 @@ async def show_add_objects_page(request: Request, success: bool = False, message
 @app.post("/add_objects")
 async def add_objects(request: Request, object_names: str = Form(...)):
     """新しい評価対象（飲食店）を objects テーブルに追加"""
+    if not request.session.get("user_id"):
+        return RedirectResponse(url="/", status_code=303)
     new_objects = [name.strip() for name in object_names.split(",") if name.strip()]
 
     if not new_objects:
@@ -715,7 +723,11 @@ async def change_password(request: Request, current_password: str = Form(...), n
             return RedirectResponse(url="/", status_code=303)
 
         # 現在のパスワードを確認
-        if not bcrypt.checkpw(current_password.encode(), row["password_hash"].encode()):
+        try:
+            pw_ok = bcrypt.checkpw(current_password.encode(), row["password_hash"].encode())
+        except (ValueError, TypeError):
+            pw_ok = False
+        if not pw_ok:
             return RedirectResponse(url="/change_password?error=wrong", status_code=303)
 
         # 新パスワードをハッシュ化して更新
@@ -952,8 +964,12 @@ async def submit_review(request: Request, object_id: str = Form(...), comment: s
         return RedirectResponse(url="/", status_code=303)
 
     comment = comment.strip()[:500]  # 最大500文字
+    try:
+        safe_oid = str(int(object_id))
+    except (ValueError, TypeError):
+        return RedirectResponse(url="/post_review", status_code=303)
     if not comment:
-        return RedirectResponse(url=f"/post_review?object_id={object_id}", status_code=303)
+        return RedirectResponse(url=f"/post_review?object_id={safe_oid}", status_code=303)
 
     try:
         now = datetime.datetime.now().isoformat()
@@ -974,9 +990,9 @@ async def submit_review(request: Request, object_id: str = Form(...), comment: s
                 )
     except Exception as e:
         logging.error(f"Failed to save review: {e}")
-        return RedirectResponse(url=f"/post_review?object_id={object_id}", status_code=303)
+        return RedirectResponse(url=f"/post_review?object_id={safe_oid}", status_code=303)
 
-    return RedirectResponse(url=f"/store/{object_id}", status_code=303)
+    return RedirectResponse(url=f"/store/{safe_oid}", status_code=303)
 
 
 @app.get("/edit_review/{review_id}", response_class=HTMLResponse)
@@ -1138,7 +1154,10 @@ async def submit_ratings(request: Request):
         logging.info("No ratings in submission, redirecting to recommendations")
         return RedirectResponse(url="/recommendations", status_code=303)
 
-    uid = int(request.session["user_id"])
+    session_uid = request.session.get("user_id")
+    if not session_uid:
+        return RedirectResponse(url="/", status_code=303)
+    uid = int(session_uid)
     logging.info(f"Processing ratings for user_id: {uid}")
 
     try:

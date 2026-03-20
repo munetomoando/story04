@@ -4,7 +4,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import pandas as pd
-from recommendation import recommend_for_all_users, recommend_for_single_user, categorize_recommendation, user_object_matrix, user_zscore_matrix, get_username
+from recommendation import recommend_for_all_users, recommend_for_single_user, categorize_recommendation, explain_recommendations, user_object_matrix, user_zscore_matrix, get_username
 import os
 import sqlite3
 import bcrypt
@@ -1076,13 +1076,27 @@ async def recommendations_page(request: Request):
     user_recommendations = user_recommendations[user_recommendations["recommendation_score"] >= 0.25]
     user_recommendations = user_recommendations.sort_values("recommendation_score", ascending=False)
 
+    # 推薦理由を生成
+    rec_object_ids = user_recommendations["object_id"].tolist()
+    explanations = {}
+    if rec_object_ids:
+        try:
+            explanations = explain_recommendations(user_id, rec_object_ids)
+        except Exception as e:
+            logging.warning(f"Failed to generate recommendation explanations: {e}")
+
+    rec_list = user_recommendations.to_dict(orient="records")
+    for rec in rec_list:
+        exp = explanations.get(str(rec["object_id"]), {})
+        rec["reason"] = exp.get("reason", "")
+
     popular_objects = get_popular_objects()
 
     return templates.TemplateResponse("recommendations.html", {
         "request": request,
         "username": username,
         "current_group_code": get_user_group_code(request.session.get("user_id")),
-        "recommendations": user_recommendations.to_dict(orient="records"),
+        "recommendations": rec_list,
         "popular_objects": popular_objects,
     })
 

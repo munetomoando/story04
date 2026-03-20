@@ -216,6 +216,71 @@ def recommend_for_single_user(target_user_id, threshold=0.3):
     return pd.DataFrame(rows, columns=["user_id", "object_id", "recommendation_score"])
 
 
+def explain_recommendations(target_user_id, object_ids, threshold=0.3):
+    """推薦理由を生成する。object_ids は理由を知りたい店舗IDのリスト。
+    Returns: {object_id: {"similar_count": int, "avg_rating": float, "max_similarity": float, "reason": str}}
+    """
+    target_user_id = str(target_user_id)
+
+    if user_similarity.empty or user_object_matrix.empty:
+        return {}
+
+    if target_user_id not in user_similarity.index:
+        return {}
+
+    # 類似度ベクトル（閾値適用済み）
+    sim_series = user_similarity.loc[target_user_id].copy()
+    sim_series[target_user_id] = 0
+    sim_series[sim_series < threshold] = 0
+    similar_users = sim_series[sim_series > 0]
+
+    if similar_users.empty:
+        return {}
+
+    results = {}
+    for oid in object_ids:
+        oid = str(oid)
+        if oid not in user_object_matrix.columns:
+            continue
+
+        # この店を評価済みの類似ユーザーを抽出
+        ratings_col = user_object_matrix[oid]
+        rated_similar = similar_users.index.intersection(ratings_col.dropna().index)
+        rated_similar = [u for u in rated_similar if u in similar_users.index and similar_users[u] > 0]
+
+        if not rated_similar:
+            results[oid] = {
+                "similar_count": 0,
+                "avg_rating": 0,
+                "max_similarity": 0,
+                "reason": "",
+            }
+            continue
+
+        count = len(rated_similar)
+        avg_rating = float(ratings_col[rated_similar].mean())
+        max_sim = float(similar_users[rated_similar].max())
+
+        # 理由文を生成
+        if avg_rating >= 4.0:
+            rating_desc = "高く評価"
+        elif avg_rating >= 3.0:
+            rating_desc = "好意的に評価"
+        else:
+            rating_desc = "評価"
+
+        reason = f"好みが近い{count}人のユーザーが{rating_desc}しています（平均 {avg_rating:.1f}点）"
+
+        results[oid] = {
+            "similar_count": count,
+            "avg_rating": round(avg_rating, 1),
+            "max_similarity": round(max_sim, 2),
+            "reason": reason,
+        }
+
+    return results
+
+
 def categorize_recommendation(score, default=None):
     """スコアに基づいて星マークを付与。default は閾値未満時の戻り値"""
     try:

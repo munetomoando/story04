@@ -43,6 +43,11 @@
                     </div>
                     <div class="rec-score">スコア: {{ rec.recommendation_score }}</div>
                 </div>
+                {% if rec.reason %}
+                <div style="padding:0 20px 14px;font-size:12px;color:#666;line-height:1.5;">
+                    {{ rec.reason }}
+                </div>
+                {% endif %}
             </a>
             {% endfor %}
         </div>

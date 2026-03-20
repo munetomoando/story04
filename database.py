@@ -95,6 +95,7 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_login_logs_at ON login_logs(logged_in_at);
         CREATE INDEX IF NOT EXISTS idx_page_views_at ON page_views(viewed_at);
         CREATE UNIQUE INDEX IF NOT EXISTS idx_one_review_per_user_object ON reviews(user_id, object_id);
+        CREATE INDEX IF NOT EXISTS idx_reviews_deleted ON reviews(deleted_at);
         CREATE TABLE IF NOT EXISTS group_codes (
             code       TEXT PRIMARY KEY,
             label      TEXT NOT NULL,

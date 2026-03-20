@@ -170,8 +170,19 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         return await call_next(request)
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """セキュリティヘッダーを全レスポンスに付与"""
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        return response
+
 # ミドルウェアは後に追加したものが先に実行される
-# 実行順: SessionMiddleware → CSRFMiddleware → AdminAuthMiddleware
+# 実行順: SessionMiddleware → CSRFMiddleware → AdminAuthMiddleware → SecurityHeaders
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(AdminAuthMiddleware)
 app.add_middleware(CSRFMiddleware)
 
@@ -2103,6 +2114,10 @@ async def admin_users_page(request: Request, sort: str = "id_asc", page: int = 1
         for r in rows
     ]
 
+    # 仮パスワード表示（セッションから読み取り後クリア）
+    reset_pw = request.session.pop("_reset_pw", "")
+    reset_uid = request.session.pop("_reset_uid", "")
+
     return templates.TemplateResponse("admin_users.html", {
         "request": request,
         "users": users,
@@ -2110,6 +2125,8 @@ async def admin_users_page(request: Request, sort: str = "id_asc", page: int = 1
         "current_page": page,
         "total_pages": total_pages,
         "total_count": total_count,
+        "reset_pw": reset_pw,
+        "reset_uid": reset_uid,
     })
 
 
@@ -2152,7 +2169,7 @@ async def admin_restore_user(user_id: int = Form(...)):
 
 
 @app.post("/admin/users/reset_password")
-async def admin_reset_password(user_id: int = Form(...)):
+async def admin_reset_password(request: Request, user_id: int = Form(...)):
     """管理者がユーザーのパスワードをリセット（仮パスワードを設定）"""
     import string
     import random
@@ -2163,7 +2180,10 @@ async def admin_reset_password(user_id: int = Form(...)):
     with get_db() as conn:
         conn.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (pw_hash, user_id))
     logging.info(f"Password reset for user_id={user_id}")
-    return RedirectResponse(url=f"/admin/users?reset_pw={temp_pw}&reset_uid={user_id}", status_code=303)
+    # セッションに一時保存（URL に露出させない）
+    request.session["_reset_pw"] = temp_pw
+    request.session["_reset_uid"] = str(user_id)
+    return RedirectResponse(url="/admin/users", status_code=303)
 
 
 @app.get("/admin/comments", response_class=HTMLResponse)
@@ -2435,7 +2455,7 @@ def _dashboard_query_data(since_date, inactive_threshold_date):
             "SELECT rr.report_id, rr.review_id, rr.reason, rr.created_at, "
             "rv.comment, rv.object_id, u_reporter.username as reporter, u_author.username as author "
             "FROM review_reports rr "
-            "JOIN reviews rv ON rr.review_id = rv.review_id "
+            "JOIN reviews rv ON rr.review_id = rv.review_id AND rv.deleted_at IS NULL "
             "JOIN users u_reporter ON rr.user_id = u_reporter.user_id "
             "JOIN users u_author ON rv.user_id = u_author.user_id "
             "ORDER BY rr.created_at DESC"
@@ -2543,10 +2563,13 @@ async def admin_backup():
         if db_path.exists():
             # VACUUM INTO で一貫性のあるスナップショットを作成
             snapshot_path = DATA_DIR / "lunchmap_backup_tmp.db"
+            # パスを resolve して DATA_DIR 配下であることを検証
+            resolved = snapshot_path.resolve()
+            assert str(resolved).startswith(str(DATA_DIR.resolve())), "Invalid snapshot path"
             try:
                 import sqlite3 as _sqlite3
                 src = _sqlite3.connect(str(db_path), timeout=30)
-                src.execute(f"VACUUM INTO '{snapshot_path}'")
+                src.execute(f"VACUUM INTO '{resolved}'")
                 src.close()
                 zf.write(snapshot_path, "lunchmap.db")
                 snapshot_path.unlink()

@@ -46,7 +46,7 @@
 <!-- ===== 一休み画面 ===== -->
 <div id="break-section" class="done-section" style="display:none;">
     <div class="done-icon">☕</div>
-    <h2 class="done-title"><span id="break-count">20</span>件の評価が完了！</h2>
+    <h2 class="done-title"><span id="break-count">{{ break_every }}</span>件の評価が完了！</h2>
     <p class="done-desc">お疲れさまです。ここまでの評価でおすすめを表示することもできます。</p>
     <form id="rating-form-break" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
     <button class="btn-primary" onclick="submitRatingsBreak()">ここまでの評価でおすすめを見る</button>
@@ -275,7 +275,7 @@ function buildCard(obj, extraClass) {
         </div>`;
 }
 
-const BREAK_EVERY = 20;  // 何件ごとに休憩を挟むか
+const BREAK_EVERY = {{ break_every }};  // 何件ごとに休憩を挟むか
 let ratedInSession = 0;   // このセッションで評価した件数
 
 function showCard(index) {

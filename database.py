@@ -100,6 +100,11 @@ def init_db():
             label      TEXT NOT NULL,
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS genres (
+            genre_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+            name       TEXT NOT NULL UNIQUE,
+            sort_order INTEGER NOT NULL DEFAULT 0
+        );
     """)
     # 既存テーブルへのカラム追加マイグレーション
     migrations = [
@@ -118,6 +123,21 @@ def init_db():
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError:
             pass  # カラムが既に存在する場合は無視
+
+    # ジャンルの初期データ投入（テーブルが空の場合のみ）
+    if conn.execute("SELECT COUNT(*) FROM genres").fetchone()[0] == 0:
+        default_genres = [
+            "和食", "洋食", "中華", "イタリアン", "カレー", "ラーメン",
+            "蕎麦・うどん", "寿司", "焼肉・韓国料理", "定食・食堂",
+            "ファストフード", "カフェ", "タイ・エスニック", "居酒屋", "その他",
+        ]
+        conn.executemany(
+            "INSERT INTO genres (name, sort_order) VALUES (?, ?)",
+            [(name, i) for i, name in enumerate(default_genres)]
+        )
+        conn.commit()
+        logging.info(f"Inserted {len(default_genres)} default genres")
+
     conn.close()
     logging.info("SQLite DB initialized (WAL mode)")
 

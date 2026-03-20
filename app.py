@@ -64,6 +64,16 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 import threading
 
+# =============================
+# アプリケーション設定定数
+# =============================
+BREAK_EVERY = 20                  # 評価の休憩間隔（件数）
+MIN_RATINGS_FOR_POPULAR = 3       # 人気ランキングに載せる最低評価件数
+FEW_RATINGS_THRESHOLD = 3         # ダッシュボード「評価少ない」アラートの閾値
+INACTIVE_DAYS_THRESHOLD = 14      # ダッシュボード「離脱ユーザー」の日数閾値
+STORE_VIEWS_RANKING_LIMIT = 20    # 店舗閲覧ランキングの表示件数
+_ADMIN_PAGE_SIZE = 50             # 管理ページのページネーションサイズ
+
 _cached_merged_df = None
 _cached_object_id_to_name = None
 _cached_user_dict = None
@@ -338,7 +348,7 @@ def get_store_image_map() -> dict:
 
 
 def get_popular_objects(top_n=5):
-    """全ユーザーの平均評価が高い店舗上位 top_n を返す（最低3件以上の評価が必要）"""
+    """全ユーザーの平均評価が高い店舗上位 top_n を返す"""
     try:
         with get_db() as conn:
             rows = conn.execute("""
@@ -349,10 +359,10 @@ def get_popular_objects(top_n=5):
                 FROM ratings r
                 JOIN objects o ON r.object_id = o.object_id
                 GROUP BY r.object_id
-                HAVING COUNT(*) >= 3
+                HAVING COUNT(*) >= ?
                 ORDER BY mean DESC
                 LIMIT ?
-            """, (top_n,)).fetchall()
+            """, (MIN_RATINGS_FOR_POPULAR, top_n)).fetchall()
         return [
             {
                 "object_id": r["object_id"],
@@ -977,6 +987,7 @@ async def show_rating_page(request: Request):
         "unrated_objects": unrated_objects,
         "rated_objects": rated_objects,
         "past_ratings": past_ratings,
+        "break_every": BREAK_EVERY,
     })
 
 
@@ -1647,11 +1658,9 @@ async def admin_objects_page(request: Request):
         r for r in _load_requests().to_dict(orient="records")
         if r.get("status") == "pending"
     ]
-    genre_choices = [
-        "和食", "洋食", "中華", "イタリアン", "カレー", "ラーメン",
-        "蕎麦・うどん", "寿司", "焼肉・韓国料理", "定食・食堂",
-        "ファストフード", "カフェ", "タイ・エスニック", "居酒屋", "その他",
-    ]
+    with get_db() as conn:
+        genre_rows = conn.execute("SELECT name FROM genres ORDER BY sort_order, name").fetchall()
+    genre_choices = [r["name"] for r in genre_rows] if genre_rows else ["その他"]
 
     return templates.TemplateResponse("admin_objects.html", {
         "request": request,
@@ -1838,8 +1847,6 @@ async def admin_delete_group(code: str = Form(...)):
         conn.execute("DELETE FROM group_codes WHERE code = ?", (code,))
     return RedirectResponse(url="/admin/groups", status_code=303)
 
-
-_ADMIN_PAGE_SIZE = 50
 
 @app.get("/admin/users", response_class=HTMLResponse)
 async def admin_users_page(request: Request, sort: str = "id_asc", page: int = 1):
@@ -2090,20 +2097,54 @@ async def admin_logout(request: Request):
     return RedirectResponse(url="/admin/login", status_code=303)
 
 
-@app.get("/admin/dashboard", response_class=HTMLResponse)
-async def admin_dashboard(request: Request, period: str = "30"):
-    """管理ダッシュボード"""
-    now = datetime.datetime.now()
-    fourteen_days_ago = (now - datetime.timedelta(days=14)).isoformat()
+def _make_ts_chart(datasets, title, ylabel):
+    """時系列折れ線グラフを Base64 PNG として生成"""
+    fig, ax = plt.subplots(figsize=(10, 3.5))
+    for label, rows, color in datasets:
+        if rows:
+            days_list = [r["day"] for r in rows]
+            counts = [r["cnt"] for r in rows]
+            ax.plot(days_list, counts, marker='o', markersize=4, label=label, color=color, linewidth=2)
+    ax.set_title(title, fontsize=14)
+    ax.set_ylabel(ylabel, fontsize=11)
+    ax.legend(fontsize=10)
+    ax.grid(True, alpha=0.3)
+    if ax.get_xlim()[1] - ax.get_xlim()[0] > 10:
+        ax.tick_params(axis='x', rotation=45, labelsize=9)
+    else:
+        ax.tick_params(axis='x', rotation=45, labelsize=10)
+    plt.tight_layout()
+    buf = BytesIO()
+    plt.savefig(buf, format='png', dpi=100)
+    plt.close(fig)
+    buf.seek(0)
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-    period_map = {"1": 1, "7": 7, "30": 30, "90": 90, "180": 180, "365": 365}
-    days = period_map.get(period, 30)
-    period_label = {"1": "直近1日", "7": "直近1週間", "30": "直近30日",
-                    "90": "直近90日", "180": "直近180日", "365": "直近1年間"}.get(period, "直近30日")
-    since_date = (now - datetime.timedelta(days=days)).date().isoformat()
 
+def _make_bar_chart(rows, title):
+    """横棒グラフを Base64 PNG として生成"""
+    if not rows:
+        return None
+    names = [r["object_name"][:15] for r in rows][::-1]
+    counts = [r["cnt"] for r in rows][::-1]
+    fig, ax = plt.subplots(figsize=(10, max(3, len(names) * 0.35)))
+    bars = ax.barh(names, counts, color='#2e7d32', height=0.6)
+    ax.set_title(title, fontsize=14)
+    ax.set_xlabel('Views', fontsize=11)
+    for bar, cnt in zip(bars, counts):
+        ax.text(bar.get_width() + 0.3, bar.get_y() + bar.get_height()/2, str(cnt),
+                va='center', fontsize=10)
+    plt.tight_layout()
+    buf = BytesIO()
+    plt.savefig(buf, format='png', dpi=100)
+    plt.close(fig)
+    buf.seek(0)
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+
+def _dashboard_query_data(since_date, inactive_threshold_date):
+    """ダッシュボード用の全データを DB から取得して辞書で返す"""
     with get_db() as conn:
-        # --- 時系列データ ---
         new_users = conn.execute(
             "SELECT DATE(created_at) as day, COUNT(*) as cnt FROM users "
             "WHERE created_at IS NOT NULL AND DATE(created_at) >= ? GROUP BY day ORDER BY day",
@@ -2134,19 +2175,16 @@ async def admin_dashboard(request: Request, period: str = "30"):
             (since_date,)
         ).fetchall()
 
-        # --- 店舗閲覧ランキング ---
         store_views = conn.execute(
             "SELECT pv.object_id, o.object_name, COUNT(*) as cnt "
             "FROM page_views pv JOIN objects o ON pv.object_id = o.object_id "
-            "GROUP BY pv.object_id ORDER BY cnt DESC LIMIT 20"
+            "GROUP BY pv.object_id ORDER BY cnt DESC LIMIT ?",
+            (STORE_VIEWS_RANKING_LIMIT,)
         ).fetchall()
 
-        # --- アラート: 未設定項目 ---
         all_objects = conn.execute(
             "SELECT object_id, object_name, latitude, longitude FROM objects ORDER BY object_id"
         ).fetchall()
-
-        no_location = [r for r in all_objects if r["latitude"] is None or r["longitude"] is None]
 
         no_review_objects = conn.execute(
             "SELECT o.object_id, o.object_name FROM objects o "
@@ -2157,27 +2195,25 @@ async def admin_dashboard(request: Request, period: str = "30"):
         few_ratings = conn.execute(
             "SELECT o.object_id, o.object_name, COUNT(r.rating) as cnt "
             "FROM objects o LEFT JOIN ratings r ON o.object_id = r.object_id "
-            "GROUP BY o.object_id HAVING cnt < 3 ORDER BY cnt"
+            "GROUP BY o.object_id HAVING cnt < ? ORDER BY cnt",
+            (FEW_RATINGS_THRESHOLD,)
         ).fetchall()
 
-        # --- アラート: 離脱ユーザー ---
         inactive_users = conn.execute(
             "SELECT u.user_id, u.username, u.status, MAX(ll.logged_in_at) as last_login "
             "FROM users u LEFT JOIN login_logs ll ON u.user_id = ll.user_id "
             "GROUP BY u.user_id "
             "HAVING last_login < ? OR last_login IS NULL "
             "ORDER BY last_login",
-            (fourteen_days_ago,)
+            (inactive_threshold_date,)
         ).fetchall()
 
-        # --- 運営: リクエスト処理状況 ---
         pending_requests = conn.execute(
             "SELECT COUNT(*) as cnt, "
             "AVG(julianday('now') - julianday(created_at)) as avg_days "
             "FROM object_requests WHERE status = 'pending'"
         ).fetchone()
 
-        # --- 運営: 通報された口コミ ---
         reported_reviews = conn.execute(
             "SELECT rr.report_id, rr.review_id, rr.reason, rr.created_at, "
             "rv.comment, rv.object_id, u_reporter.username as reporter, u_author.username as author "
@@ -2188,71 +2224,54 @@ async def admin_dashboard(request: Request, period: str = "30"):
             "ORDER BY rr.created_at DESC"
         ).fetchall()
 
+    return {
+        "new_users": new_users, "active_users": active_users,
+        "daily_ratings": daily_ratings, "daily_reviews": daily_reviews,
+        "daily_views": daily_views, "store_views": store_views,
+        "all_objects": all_objects, "no_review_objects": no_review_objects,
+        "few_ratings": few_ratings, "inactive_users": inactive_users,
+        "pending_requests": pending_requests, "reported_reviews": reported_reviews,
+    }
+
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request, period: str = "30"):
+    """管理ダッシュボード"""
+    now = datetime.datetime.now()
+    inactive_threshold_date = (now - datetime.timedelta(days=INACTIVE_DAYS_THRESHOLD)).isoformat()
+
+    period_map = {"1": 1, "7": 7, "30": 30, "90": 90, "180": 180, "365": 365}
+    days = period_map.get(period, 30)
+    period_label = {"1": "直近1日", "7": "直近1週間", "30": "直近30日",
+                    "90": "直近90日", "180": "直近180日", "365": "直近1年間"}.get(period, "直近30日")
+    since_date = (now - datetime.timedelta(days=days)).date().isoformat()
+
+    # DB からデータ取得
+    data = _dashboard_query_data(since_date, inactive_threshold_date)
+
     # 写真未登録チェック
     image_map = get_store_image_map()
-    no_photo = [r for r in all_objects if str(r["object_id"]) not in image_map]
+    no_photo = [r for r in data["all_objects"] if str(r["object_id"]) not in image_map]
+    no_location = [r for r in data["all_objects"] if r["latitude"] is None or r["longitude"] is None]
 
-    # --- グラフ生成 ---
-    def make_ts_chart(datasets, title, ylabel):
-        """時系列折れ線グラフを生成"""
-        fig, ax = plt.subplots(figsize=(10, 3.5))
-        for label, rows, color in datasets:
-            if rows:
-                days = [r["day"] for r in rows]
-                counts = [r["cnt"] for r in rows]
-                ax.plot(days, counts, marker='o', markersize=4, label=label, color=color, linewidth=2)
-        ax.set_title(title, fontsize=14)
-        ax.set_ylabel(ylabel, fontsize=11)
-        ax.legend(fontsize=10)
-        ax.grid(True, alpha=0.3)
-        if ax.get_xlim()[1] - ax.get_xlim()[0] > 10:
-            ax.tick_params(axis='x', rotation=45, labelsize=9)
-        else:
-            ax.tick_params(axis='x', rotation=45, labelsize=10)
-        plt.tight_layout()
-        buf = BytesIO()
-        plt.savefig(buf, format='png', dpi=100)
-        plt.close(fig)
-        buf.seek(0)
-        return base64.b64encode(buf.getvalue()).decode('utf-8')
-
-    def make_bar_chart(rows, title):
-        """横棒グラフを生成"""
-        if not rows:
-            return None
-        names = [r["object_name"][:15] for r in rows][::-1]
-        counts = [r["cnt"] for r in rows][::-1]
-        fig, ax = plt.subplots(figsize=(10, max(3, len(names) * 0.35)))
-        bars = ax.barh(names, counts, color='#2e7d32', height=0.6)
-        ax.set_title(title, fontsize=14)
-        ax.set_xlabel('Views', fontsize=11)
-        for bar, cnt in zip(bars, counts):
-            ax.text(bar.get_width() + 0.3, bar.get_y() + bar.get_height()/2, str(cnt),
-                    va='center', fontsize=10)
-        plt.tight_layout()
-        buf = BytesIO()
-        plt.savefig(buf, format='png', dpi=100)
-        plt.close(fig)
-        buf.seek(0)
-        return base64.b64encode(buf.getvalue()).decode('utf-8')
-
+    # チャート生成（キャッシュ利用）
     cache_key = f"dashboard_{period}"
     cached = _get_cached(cache_key)
     if cached:
         chart_activity, chart_content, chart_store_views = cached
     else:
-        chart_activity = make_ts_chart([
-            ('Active Users', active_users, '#1565c0'),
-            ('Card Views', daily_views, '#2e7d32'),
+        chart_activity = _make_ts_chart([
+            ('Active Users', data["active_users"], '#1565c0'),
+            ('Card Views', data["daily_views"], '#2e7d32'),
         ], 'Daily Active Users & Card Views', 'Count')
 
-        chart_content = make_ts_chart([
-            ('Ratings', daily_ratings, '#f59e0b'),
-            ('Reviews', daily_reviews, '#e65100'),
-            ('New Users', new_users, '#1565c0'),
+        chart_content = _make_ts_chart([
+            ('Ratings', data["daily_ratings"], '#f59e0b'),
+            ('Reviews', data["daily_reviews"], '#e65100'),
+            ('New Users', data["new_users"], '#1565c0'),
         ], 'Daily Ratings, Reviews & New Users', 'Count')
 
-        chart_store_views = make_bar_chart(store_views, 'Store Card Views Ranking')
+        chart_store_views = _make_bar_chart(data["store_views"], 'Store Card Views Ranking')
         _set_cached(cache_key, (chart_activity, chart_content, chart_store_views))
 
     return templates.TemplateResponse("admin_dashboard.html", {
@@ -2264,16 +2283,16 @@ async def admin_dashboard(request: Request, period: str = "30"):
         "chart_store_views": chart_store_views,
         "no_photo": [{"object_id": r["object_id"], "object_name": r["object_name"]} for r in no_photo],
         "no_location": [{"object_id": r["object_id"], "object_name": r["object_name"]} for r in no_location],
-        "no_review_objects": [{"object_id": r["object_id"], "object_name": r["object_name"]} for r in no_review_objects],
-        "few_ratings": [{"object_id": r["object_id"], "object_name": r["object_name"], "cnt": r["cnt"]} for r in few_ratings],
+        "no_review_objects": [{"object_id": r["object_id"], "object_name": r["object_name"]} for r in data["no_review_objects"]],
+        "few_ratings": [{"object_id": r["object_id"], "object_name": r["object_name"], "cnt": r["cnt"]} for r in data["few_ratings"]],
         "inactive_users": [
             {"user_id": r["user_id"], "username": r["username"],
              "last_login": r["last_login"][:10] if r["last_login"] else "未ログイン",
              "status": r["status"] or "active"}
-            for r in inactive_users
+            for r in data["inactive_users"]
         ],
-        "pending_count": pending_requests["cnt"] or 0,
-        "pending_avg_days": round(pending_requests["avg_days"] or 0, 1),
+        "pending_count": data["pending_requests"]["cnt"] or 0,
+        "pending_avg_days": round(data["pending_requests"]["avg_days"] or 0, 1),
         "reported_reviews": [
             {
                 "report_id": r["report_id"], "review_id": r["review_id"],
@@ -2281,7 +2300,7 @@ async def admin_dashboard(request: Request, period: str = "30"):
                 "comment": r["comment"][:80], "reason": r["reason"],
                 "created_at": r["created_at"][:10], "object_id": r["object_id"],
             }
-            for r in reported_reviews
+            for r in data["reported_reviews"]
         ],
     })
 

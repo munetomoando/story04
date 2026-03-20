@@ -114,10 +114,20 @@ async def login_page(request: Request, error_message: str = ""):
         return RedirectResponse(url=f"/rating", status_code=303)
     return templates.TemplateResponse("index.html", {"request": request, "error_message": error_message})
 
-# 管理者認証情報（環境変数から取得）
+# 管理者認証情報（環境変数 → ファイル の順に読み込み）
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH", "")
 INVITE_CODE = os.getenv("INVITE_CODE", "")
+
+def _load_admin_hash():
+    """環境変数に設定がなければファイルから読み込み"""
+    global ADMIN_PASSWORD_HASH
+    if not ADMIN_PASSWORD_HASH:
+        _hash_file = pathlib.Path(os.getenv("DATA_DIR", "/data")) / ".admin_password_hash"
+        if _hash_file.exists():
+            ADMIN_PASSWORD_HASH = _hash_file.read_text().strip()
+
+_load_admin_hash()
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import RedirectResponse as StarletteRedirect
@@ -129,6 +139,9 @@ class AdminAuthMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/admin") and request.url.path != "/admin/login":
             if not request.session.get("is_admin"):
                 return StarletteRedirect(url="/admin/login", status_code=303)
+        # 管理者パスワード未設定時はセットアップページへ誘導
+        if not ADMIN_PASSWORD_HASH and request.url.path == "/admin/login":
+            return StarletteRedirect(url="/setup", status_code=303)
         return await call_next(request)
 
 CSRF_EXEMPT_PATHS: set[str] = set()  # 全POSTエンドポイントでCSRF検証を実施
@@ -434,6 +447,48 @@ def update_user_similarity():
 
     # `user_similarity` を更新
     user_similarity = new_similarity_matrix
+
+
+# =============================
+# 初期セットアップ（管理者パスワード未設定時）
+# =============================
+
+@app.get("/setup", response_class=HTMLResponse)
+async def setup_page(request: Request):
+    """管理者パスワード初期設定ページ"""
+    if ADMIN_PASSWORD_HASH:
+        return RedirectResponse(url="/admin/login", status_code=303)
+    return templates.TemplateResponse("setup.html", {"request": request, "admin_username": ADMIN_USERNAME})
+
+
+@app.post("/setup")
+@limiter.limit("5/minute")
+async def setup_submit(request: Request, admin_password: str = Form(...), admin_password_confirm: str = Form(...)):
+    """管理者パスワードを初期設定"""
+    global ADMIN_PASSWORD_HASH
+    if ADMIN_PASSWORD_HASH:
+        return RedirectResponse(url="/admin/login", status_code=303)
+
+    import re as _re
+    if admin_password != admin_password_confirm:
+        return templates.TemplateResponse("setup.html", {
+            "request": request, "error": "パスワードが一致しません。", "admin_username": ADMIN_USERNAME,
+        })
+    if len(admin_password) < 8 or not _re.search(r'[A-Za-z]', admin_password) or not _re.search(r'\d', admin_password) or not _re.search(r'[@$!%*#?&]', admin_password):
+        return templates.TemplateResponse("setup.html", {
+            "request": request, "error": "パスワードは8文字以上で、英字・数字・記号(@$!%*#?&)を各1つ以上含めてください。", "admin_username": ADMIN_USERNAME,
+        })
+
+    pw_hash = bcrypt.hashpw(admin_password.encode(), bcrypt.gensalt()).decode()
+    # ファイルに保存（環境変数を設定できない環境でも動作）
+    _hash_file = DATA_DIR / ".admin_password_hash"
+    _hash_file.parent.mkdir(parents=True, exist_ok=True)
+    _hash_file.write_text(pw_hash)
+    ADMIN_PASSWORD_HASH = pw_hash
+    logging.info("Admin password configured via setup wizard")
+
+    return RedirectResponse(url="/admin/login", status_code=303)
+
 
 @app.post("/login")
 @limiter.limit("10/minute")

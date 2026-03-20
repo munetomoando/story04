@@ -19,7 +19,6 @@ COPY . /app
 
 COPY data_seed /app/data_seed
 
-# ポートは fly の標準 8080 に合わせる
+# デフォルトポート（Fly.io: 8080, Render: 10000 等 — PORT 環境変数で上書き可能）
 ENV PORT=8080
-# Uvicorn を 0.0.0.0:8080 で起動
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD uvicorn app:app --host 0.0.0.0 --port $PORT

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>初期設定 — {{ app_name }}</title>
+    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <style>
+        .setup-container {
+            max-width: 400px; width: 92%; margin: 60px auto;
+            background: white; padding: 32px 24px; border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12); text-align: left;
+        }
+        .setup-title { font-size: 22px; color: #1b5e20; font-weight: bold; text-align: center; margin-bottom: 8px; }
+        .setup-subtitle { font-size: 13px; color: #888; text-align: center; margin-bottom: 24px; line-height: 1.6; }
+        .setup-label { display: block; font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
+        .setup-input {
+            display: block; width: 100%; padding: 10px 12px; border: 1px solid #ccc;
+            border-radius: 8px; font-size: 16px; margin-bottom: 14px; box-sizing: border-box;
+        }
+        .setup-input:focus { border-color: #2e7d32; outline: none; }
+        .setup-hint { font-size: 11px; color: #888; margin: -10px 0 14px; line-height: 1.5; }
+        .setup-btn {
+            display: block; width: 100%; padding: 14px; background: #2e7d32; color: white;
+            border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer;
+        }
+        .setup-btn:active { background: #1b5e20; }
+        .setup-error { background: #ffebee; color: #c62828; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; border: 1px solid #ef9a9a; }
+        .setup-info {
+            background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px;
+            padding: 12px 14px; font-size: 12px; color: #1565c0; margin-bottom: 20px; line-height: 1.6;
+        }
+    </style>
+</head>
+<body style="background:#e8f5e9;">
+
+<div class="setup-container">
+    <div class="setup-title">{{ app_name }}</div>
+    <div class="setup-subtitle">管理者アカウントの初期設定</div>
+
+    <div class="setup-info">
+        初めてのデプロイです。管理者パスワードを設定してください。<br>
+        管理者ユーザー名は <strong>{{ admin_username }}</strong> です。<br>
+        この設定は一度だけ行えます。
+    </div>
+
+    {% if error is defined and error %}
+    <div class="setup-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/setup">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <label class="setup-label" for="admin_password">管理者パスワード</label>
+        <input class="setup-input" type="password" id="admin_password" name="admin_password" required autocomplete="new-password">
+        <div class="setup-hint">8文字以上、英字・数字・記号(@$!%*#?&)を各1つ以上</div>
+
+        <label class="setup-label" for="admin_password_confirm">パスワード（確認）</label>
+        <input class="setup-input" type="password" id="admin_password_confirm" name="admin_password_confirm" required autocomplete="new-password">
+
+        <button type="submit" class="setup-btn">設定を完了してログインへ</button>
+    </form>
+</div>
+
+</body>
+</html>

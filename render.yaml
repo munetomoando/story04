@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: gohan-navi
+    runtime: docker
+    region: singapore
+    plan: starter
+    envVars:
+      - key: APP_NAME
+        sync: false
+        generateValue: false
+      - key: ADMIN_USERNAME
+        sync: false
+        value: admin
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+        generateValue: false
+      - key: SEED_DATA
+        value: "false"
+      - key: DATA_DIR
+        value: /data
+      - key: PORT
+        value: "8080"
+      - key: INVITE_CODE
+        sync: false
+        generateValue: false
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1

@@ -46,6 +46,9 @@
                 {% if rec.reason %}
                 <div style="padding:0 20px 14px;font-size:12px;color:#666;line-height:1.5;">
                     {{ rec.reason }}
+                    {% if rec.sub_reason %}
+                    <br><span style="color:#888;">{{ rec.sub_reason }}</span>
+                    {% endif %}
                 </div>
                 {% endif %}
             </a>

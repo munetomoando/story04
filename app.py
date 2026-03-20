@@ -1089,6 +1089,7 @@ async def recommendations_page(request: Request):
     for rec in rec_list:
         exp = explanations.get(str(rec["object_id"]), {})
         rec["reason"] = exp.get("reason", "")
+        rec["sub_reason"] = exp.get("sub_reason", "")
 
     popular_objects = get_popular_objects()
 

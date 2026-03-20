@@ -218,7 +218,9 @@ def recommend_for_single_user(target_user_id, threshold=0.3):
 
 def explain_recommendations(target_user_id, object_ids, threshold=0.3):
     """推薦理由を生成する。object_ids は理由を知りたい店舗IDのリスト。
-    Returns: {object_id: {"similar_count": int, "avg_rating": float, "max_similarity": float, "reason": str}}
+    A: 確信度（人数×類似度）、B: 一致度（評価のばらつき）、
+    C: 共通の好み（共通高評価店舗名）、D: スコア補足 を組み合わせて理由文を生成。
+    Returns: {object_id: {"reason": str, "sub_reason": str}}
     """
     target_user_id = str(target_user_id)
 
@@ -237,6 +239,13 @@ def explain_recommendations(target_user_id, object_ids, threshold=0.3):
     if similar_users.empty:
         return {}
 
+    # C: 対象ユーザーの高評価店舗（素点4点以上）を事前計算
+    target_ratings = user_object_matrix.loc[target_user_id] if target_user_id in user_object_matrix.index else pd.Series(dtype=float)
+    target_favorites = set(target_ratings[target_ratings >= 4.0].index) if not target_ratings.empty else set()
+
+    # オブジェクト名の辞書を準備
+    update_user_and_object_info()
+
     results = {}
     for oid in object_ids:
         oid = str(oid)
@@ -246,37 +255,68 @@ def explain_recommendations(target_user_id, object_ids, threshold=0.3):
         # この店を評価済みの類似ユーザーを抽出
         ratings_col = user_object_matrix[oid]
         rated_similar = similar_users.index.intersection(ratings_col.dropna().index)
-        rated_similar = [u for u in rated_similar if u in similar_users.index and similar_users[u] > 0]
+        rated_similar = [u for u in rated_similar if similar_users[u] > 0]
 
         if not rated_similar:
-            results[oid] = {
-                "similar_count": 0,
-                "avg_rating": 0,
-                "max_similarity": 0,
-                "reason": "",
-            }
+            results[oid] = {"reason": "", "sub_reason": ""}
             continue
 
         count = len(rated_similar)
-        avg_rating = float(ratings_col[rated_similar].mean())
+        ratings_values = ratings_col[rated_similar]
+        avg_rating = float(ratings_values.mean())
         max_sim = float(similar_users[rated_similar].max())
+        min_rating = float(ratings_values.min())
+        max_rating = float(ratings_values.max())
 
-        # 理由文を生成
-        if avg_rating >= 4.0:
-            rating_desc = "高く評価"
-        elif avg_rating >= 3.0:
-            rating_desc = "好意的に評価"
+        # === A: 確信度に基づくメイン理由文 ===
+        many = count >= 5
+        high_sim = max_sim >= 0.6
+
+        if many and avg_rating >= 4.0:
+            reason = f"好みが近い多くのユーザーが高く評価しています（平均 {avg_rating:.1f}点）"
+        elif not many and high_sim and avg_rating >= 4.0:
+            reason = f"あなたと特に好みが近いユーザーが高く評価しています（平均 {avg_rating:.1f}点）"
+        elif many:
+            reason = f"好みが近い{count}人のユーザーが評価しています（平均 {avg_rating:.1f}点）"
+        elif high_sim:
+            reason = f"あなたと特に好みが近い{count}人のユーザーが評価しています（平均 {avg_rating:.1f}点）"
         else:
-            rating_desc = "評価"
+            if avg_rating >= 4.0:
+                reason = f"好みが近い{count}人のユーザーが高く評価しています（平均 {avg_rating:.1f}点）"
+            elif avg_rating >= 3.0:
+                reason = f"好みが近い{count}人のユーザーが好意的に評価しています（平均 {avg_rating:.1f}点）"
+            else:
+                reason = f"好みが近い{count}人のユーザーが評価しています（平均 {avg_rating:.1f}点）"
 
-        reason = f"好みが近い{count}人のユーザーが{rating_desc}しています（平均 {avg_rating:.1f}点）"
+        # === B: 一致度に基づく補足 ===
+        sub_reason = ""
+        if count >= 2 and min_rating >= 4.0:
+            if min_rating == max_rating:
+                sub_reason = f"好みが近いユーザー全員が{int(min_rating)}点をつけています"
+            else:
+                sub_reason = f"好みが近いユーザー全員が4点以上をつけています"
+        elif count >= 2 and (max_rating - min_rating) >= 2:
+            sub_reason = f"好みが近いユーザーの間で評価が分かれています（{int(min_rating)}〜{int(max_rating)}点）"
 
-        results[oid] = {
-            "similar_count": count,
-            "avg_rating": round(avg_rating, 1),
-            "max_similarity": round(max_sim, 2),
-            "reason": reason,
-        }
+        # === C: 共通の好みに基づく補足（Bがない場合のみ） ===
+        if not sub_reason and target_favorites:
+            # 類似ユーザーの高評価店舗との共通部分を探す
+            common_favorites = set()
+            for uid in rated_similar:
+                if uid in user_object_matrix.index:
+                    u_ratings = user_object_matrix.loc[uid]
+                    u_favs = set(u_ratings[u_ratings >= 4.0].index)
+                    common_favorites |= (u_favs & target_favorites)
+            # 推薦対象の店舗自体は除外
+            common_favorites.discard(oid)
+            if common_favorites:
+                # 店舗名に変換して最大2件
+                fav_names = [object_info.get(str(fid), "") for fid in list(common_favorites)[:2]]
+                fav_names = [n for n in fav_names if n]
+                if fav_names:
+                    sub_reason = f"{'や'.join(fav_names)}を高評価した人に人気です"
+
+        results[oid] = {"reason": reason, "sub_reason": sub_reason}
 
     return results
 

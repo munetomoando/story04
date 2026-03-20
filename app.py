@@ -625,13 +625,13 @@ async def check_username(request: Request, username: str = Query(...)):
 @app.get("/register")
 async def show_register_page(request: Request):
     """新規登録ページを開く際にログアウトする"""
-    request.session.clear()
-    response = templates.TemplateResponse("register.html", {
+    # CSRFトークンを保持したまま、ユーザー関連のセッションデータのみクリア
+    for key in ["username", "user_id", "is_admin", "_reset_pw", "_reset_uid"]:
+        request.session.pop(key, None)
+    return templates.TemplateResponse("register.html", {
         "request": request,
         "invite_required": bool(INVITE_CODE),
     })
-    response.delete_cookie("session")
-    return response
 
 @app.post("/register")
 @limiter.limit("5/minute")

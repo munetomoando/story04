@@ -1943,8 +1943,8 @@ async def admin_restore_user(user_id: int = Form(...)):
 
 
 @app.get("/admin/comments", response_class=HTMLResponse)
-async def admin_comments_page(request: Request, sort: str = "date_desc", page: int = 1):
-    """口コミ管理ページ（ソート・ページネーション対応）"""
+async def admin_comments_page(request: Request, sort: str = "date_desc", page: int = 1, tab: str = "active"):
+    """口コミ管理ページ（ソート・ページネーション・タブ対応）"""
     order_map = {
         "date_desc": "rv.created_at DESC",
         "date_asc": "rv.created_at ASC",
@@ -1956,32 +1956,52 @@ async def admin_comments_page(request: Request, sort: str = "date_desc", page: i
     order_clause = order_map.get(sort, "rv.created_at DESC")
     page = max(1, page)
     offset = (page - 1) * _ADMIN_PAGE_SIZE
+    show_deleted = tab == "deleted"
 
     with get_db() as conn:
-        total_count = conn.execute("SELECT COUNT(*) as cnt FROM reviews WHERE deleted_at IS NULL").fetchone()["cnt"]
-        rows = conn.execute(
-            f"SELECT rv.review_id, u.username, o.object_name, rv.comment, rv.created_at "
-            f"FROM reviews rv "
-            f"JOIN users u ON rv.user_id = u.user_id "
-            f"JOIN objects o ON rv.object_id = o.object_id "
-            f"WHERE rv.deleted_at IS NULL "
-            f"ORDER BY {order_clause} "
-            f"LIMIT {_ADMIN_PAGE_SIZE} OFFSET {offset}"
-        ).fetchall()
+        # 両タブの件数を取得（タブに件数バッジを表示するため）
+        active_count = conn.execute("SELECT COUNT(*) as cnt FROM reviews WHERE deleted_at IS NULL").fetchone()["cnt"]
+        deleted_count = conn.execute(
+            "SELECT COUNT(*) as cnt FROM reviews WHERE deleted_at IS NOT NULL"
+        ).fetchone()["cnt"]
+        total_count = deleted_count if show_deleted else active_count
 
-        # 通報データを取得（現在ページの review_id に限定）
-        review_ids = [r["review_id"] for r in rows]
-        if review_ids:
-            placeholders = ",".join("?" * len(review_ids))
-            report_rows = conn.execute(
-                f"SELECT rr.report_id, rr.review_id, rr.reason, rr.created_at, u.username as reporter "
-                f"FROM review_reports rr JOIN users u ON rr.user_id = u.user_id "
-                f"WHERE rr.review_id IN ({placeholders}) "
-                f"ORDER BY rr.created_at DESC",
-                review_ids
+        if show_deleted:
+            rows = conn.execute(
+                f"SELECT rv.review_id, u.username, o.object_name, rv.comment, rv.created_at, "
+                f"rv.deleted_at, rv.deleted_by "
+                f"FROM reviews rv "
+                f"JOIN users u ON rv.user_id = u.user_id "
+                f"JOIN objects o ON rv.object_id = o.object_id "
+                f"WHERE rv.deleted_at IS NOT NULL "
+                f"ORDER BY rv.deleted_at DESC "
+                f"LIMIT {_ADMIN_PAGE_SIZE} OFFSET {offset}"
             ).fetchall()
-        else:
             report_rows = []
+        else:
+            rows = conn.execute(
+                f"SELECT rv.review_id, u.username, o.object_name, rv.comment, rv.created_at "
+                f"FROM reviews rv "
+                f"JOIN users u ON rv.user_id = u.user_id "
+                f"JOIN objects o ON rv.object_id = o.object_id "
+                f"WHERE rv.deleted_at IS NULL "
+                f"ORDER BY {order_clause} "
+                f"LIMIT {_ADMIN_PAGE_SIZE} OFFSET {offset}"
+            ).fetchall()
+
+            # 通報データを取得（現在ページの review_id に限定）
+            review_ids = [r["review_id"] for r in rows]
+            if review_ids:
+                placeholders = ",".join("?" * len(review_ids))
+                report_rows = conn.execute(
+                    f"SELECT rr.report_id, rr.review_id, rr.reason, rr.created_at, u.username as reporter "
+                    f"FROM review_reports rr JOIN users u ON rr.user_id = u.user_id "
+                    f"WHERE rr.review_id IN ({placeholders}) "
+                    f"ORDER BY rr.created_at DESC",
+                    review_ids
+                ).fetchall()
+            else:
+                report_rows = []
 
     total_pages = max(1, (total_count + _ADMIN_PAGE_SIZE - 1) // _ADMIN_PAGE_SIZE)
 
@@ -2006,6 +2026,8 @@ async def admin_comments_page(request: Request, sort: str = "date_desc", page: i
             "comment": r["comment"],
             "created_at": r["created_at"][:10] if r["created_at"] else "",
             "reports": reports_by_review.get(r["review_id"], []),
+            "deleted_at": r["deleted_at"][:10] if show_deleted and r["deleted_at"] else "",
+            "deleted_by": {"admin": "管理者", "user": "本人"}.get(r["deleted_by"], "") if show_deleted else "",
         }
         for r in rows
     ]
@@ -2017,7 +2039,21 @@ async def admin_comments_page(request: Request, sort: str = "date_desc", page: i
         "current_page": page,
         "total_pages": total_pages,
         "total_count": total_count,
+        "current_tab": tab,
+        "active_count": active_count,
+        "deleted_count": deleted_count,
     })
+
+
+@app.post("/admin/restore_review")
+async def admin_restore_review(review_id: int = Form(...)):
+    """削除済み口コミを復元"""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE reviews SET deleted_at = NULL, deleted_by = NULL WHERE review_id = ?",
+            (review_id,)
+        )
+    return RedirectResponse(url="/admin/comments?tab=deleted", status_code=303)
 
 
 @app.get("/admin/login", response_class=HTMLResponse)

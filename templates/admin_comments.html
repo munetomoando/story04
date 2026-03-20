@@ -134,6 +134,35 @@
     }
     .empty-msg { color: #888; font-size: 13px; padding: 16px 0; }
 
+    /* タブ */
+    .tab-bar { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 2px solid #e0e0e0; }
+    .tab-item {
+      padding: 8px 18px; font-size: 13px; font-weight: bold;
+      text-decoration: none; color: #888; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: all 0.15s;
+    }
+    .tab-item:hover { color: #2e7d32; }
+    .tab-item.active { color: #2e7d32; border-bottom-color: #2e7d32; }
+    .tab-badge {
+      display: inline-block; background: #e0e0e0; color: #666;
+      font-size: 11px; padding: 1px 7px; border-radius: 10px; margin-left: 4px;
+    }
+    .tab-item.active .tab-badge { background: #2e7d32; color: white; }
+
+    /* 削除済み行 */
+    .td-deleted-info { font-size: 11px; color: #999; white-space: nowrap; }
+    .badge-deleted-by {
+      display: inline-block; padding: 1px 6px; border-radius: 8px;
+      font-size: 10px; font-weight: bold;
+    }
+    .badge-admin { background: #ffebee; color: #c62828; }
+    .badge-user { background: #e3f2fd; color: #1565c0; }
+    .btn-restore {
+      background: #2e7d32; color: white; border: none;
+      padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer;
+    }
+    .btn-restore:hover { background: #1b5e20; }
+
     /* ページネーション */
     .pagination {
       display: flex; justify-content: center; align-items: center;
@@ -163,44 +192,85 @@
     <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
   </div>
 
+  <div class="tab-bar">
+    <a href="/admin/comments?tab=active" class="tab-item {% if current_tab == 'active' %}active{% endif %}">
+      公開中 <span class="tab-badge">{{ active_count }}</span>
+    </a>
+    <a href="/admin/comments?tab=deleted" class="tab-item {% if current_tab == 'deleted' %}active{% endif %}">
+      削除済み <span class="tab-badge">{{ deleted_count }}</span>
+    </a>
+  </div>
+
   {% if comments %}
   <div class="table-wrap">
     <table class="comments-table">
       <thead>
         <tr>
+          {% if current_tab == 'deleted' %}
+          <th>投稿日</th>
+          <th>ユーザー</th>
+          <th>店舗</th>
+          <th>コメント</th>
+          <th>削除日</th>
+          <th>削除者</th>
+          <th>操作</th>
+          {% else %}
           <th>
             {% if current_sort == 'date_desc' %}
-              <a href="/admin/comments?sort=date_asc" class="sort-link sort-active">日付 <span class="sort-arrow">▼</span></a>
+              <a href="/admin/comments?tab=active&sort=date_asc" class="sort-link sort-active">日付 <span class="sort-arrow">▼</span></a>
             {% elif current_sort == 'date_asc' %}
-              <a href="/admin/comments?sort=date_desc" class="sort-link sort-active">日付 <span class="sort-arrow">▲</span></a>
+              <a href="/admin/comments?tab=active&sort=date_desc" class="sort-link sort-active">日付 <span class="sort-arrow">▲</span></a>
             {% else %}
-              <a href="/admin/comments?sort=date_desc" class="sort-link">日付</a>
+              <a href="/admin/comments?tab=active&sort=date_desc" class="sort-link">日付</a>
             {% endif %}
           </th>
           <th>
             {% if current_sort == 'user_asc' %}
-              <a href="/admin/comments?sort=user_desc" class="sort-link sort-active">ユーザー <span class="sort-arrow">▲</span></a>
+              <a href="/admin/comments?tab=active&sort=user_desc" class="sort-link sort-active">ユーザー <span class="sort-arrow">▲</span></a>
             {% elif current_sort == 'user_desc' %}
-              <a href="/admin/comments?sort=user_asc" class="sort-link sort-active">ユーザー <span class="sort-arrow">▼</span></a>
+              <a href="/admin/comments?tab=active&sort=user_asc" class="sort-link sort-active">ユーザー <span class="sort-arrow">▼</span></a>
             {% else %}
-              <a href="/admin/comments?sort=user_asc" class="sort-link">ユーザー</a>
+              <a href="/admin/comments?tab=active&sort=user_asc" class="sort-link">ユーザー</a>
             {% endif %}
           </th>
           <th>
             {% if current_sort == 'store_asc' %}
-              <a href="/admin/comments?sort=store_desc" class="sort-link sort-active">店舗 <span class="sort-arrow">▲</span></a>
+              <a href="/admin/comments?tab=active&sort=store_desc" class="sort-link sort-active">店舗 <span class="sort-arrow">▲</span></a>
             {% elif current_sort == 'store_desc' %}
-              <a href="/admin/comments?sort=store_asc" class="sort-link sort-active">店舗 <span class="sort-arrow">▼</span></a>
+              <a href="/admin/comments?tab=active&sort=store_asc" class="sort-link sort-active">店舗 <span class="sort-arrow">▼</span></a>
             {% else %}
-              <a href="/admin/comments?sort=store_asc" class="sort-link">店舗</a>
+              <a href="/admin/comments?tab=active&sort=store_asc" class="sort-link">店舗</a>
             {% endif %}
           </th>
           <th>コメント</th>
           <th>操作</th>
+          {% endif %}
         </tr>
       </thead>
       <tbody>
         {% for rv in comments %}
+        {% if current_tab == 'deleted' %}
+        <tr>
+          <td class="td-date">{{ rv.created_at }}</td>
+          <td class="td-user">{{ rv.username }}</td>
+          <td class="td-store">{{ rv.object_name }}</td>
+          <td class="td-comment">{{ rv.comment }}</td>
+          <td class="td-deleted-info">{{ rv.deleted_at }}</td>
+          <td class="td-deleted-info">
+            {% if rv.deleted_by == '管理者' %}
+              <span class="badge-deleted-by badge-admin">{{ rv.deleted_by }}</span>
+            {% else %}
+              <span class="badge-deleted-by badge-user">{{ rv.deleted_by }}</span>
+            {% endif %}
+          </td>
+          <td class="td-action">
+            <form method="post" action="/admin/restore_review" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="review_id" value="{{ rv.review_id }}">
+              <button type="submit" class="btn-restore" onclick="return confirm('この口コミを復元しますか？')">復元</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
         <tr{% if rv.reports %} class="has-reports"{% endif %}>
           <td class="td-date">{{ rv.created_at }}</td>
           <td class="td-user">{{ rv.username }}</td>
@@ -237,6 +307,7 @@
             </form>
           </td>
         </tr>
+        {% endif %}
         {% endfor %}
       </tbody>
     </table>
@@ -246,8 +317,8 @@
   <div class="pagination">
     <span class="info">{{ current_page }}/{{ total_pages }}ページ</span>
     {% if current_page > 1 %}
-      <a href="/admin/comments?sort={{ current_sort }}&page=1">&laquo;</a>
-      <a href="/admin/comments?sort={{ current_sort }}&page={{ current_page - 1 }}">&lsaquo;</a>
+      <a href="/admin/comments?tab={{ current_tab }}&sort={{ current_sort }}&page=1">&laquo;</a>
+      <a href="/admin/comments?tab={{ current_tab }}&sort={{ current_sort }}&page={{ current_page - 1 }}">&lsaquo;</a>
     {% else %}
       <span class="disabled">&laquo;</span>
       <span class="disabled">&lsaquo;</span>
@@ -256,14 +327,14 @@
       {% if p == current_page %}
         <span class="current">{{ p }}</span>
       {% elif p <= 3 or p > total_pages - 3 or (p >= current_page - 2 and p <= current_page + 2) %}
-        <a href="/admin/comments?sort={{ current_sort }}&page={{ p }}">{{ p }}</a>
+        <a href="/admin/comments?tab={{ current_tab }}&sort={{ current_sort }}&page={{ p }}">{{ p }}</a>
       {% elif p == 4 or p == total_pages - 3 %}
         <span class="info">…</span>
       {% endif %}
     {% endfor %}
     {% if current_page < total_pages %}
-      <a href="/admin/comments?sort={{ current_sort }}&page={{ current_page + 1 }}">&rsaquo;</a>
-      <a href="/admin/comments?sort={{ current_sort }}&page={{ total_pages }}">&raquo;</a>
+      <a href="/admin/comments?tab={{ current_tab }}&sort={{ current_sort }}&page={{ current_page + 1 }}">&rsaquo;</a>
+      <a href="/admin/comments?tab={{ current_tab }}&sort={{ current_sort }}&page={{ total_pages }}">&raquo;</a>
     {% else %}
       <span class="disabled">&rsaquo;</span>
       <span class="disabled">&raquo;</span>

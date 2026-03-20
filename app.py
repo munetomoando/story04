@@ -428,11 +428,6 @@ def update_user_similarity():
     # `user_similarity` を更新
     user_similarity = new_similarity_matrix
 
-@app.get("/routes")
-async def get_routes():
-    return [{"path": route.path, "name": route.name} for route in app.router.routes]
-
-
 @app.post("/login")
 @limiter.limit("10/minute")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -503,9 +498,11 @@ async def show_index_page(request: Request):
 
 
 @app.get("/objects")
-def get_objects():
-    """レストラン一覧を取得"""
-    return {"object_names": list(object_dict.values())}  # API ではリストとして返す
+def get_objects(request: Request):
+    """レストラン一覧を取得（ログイン必須）"""
+    if not request.session.get("user_id"):
+        return JSONResponse(content={"detail": "Unauthorized"}, status_code=401)
+    return {"object_names": list(object_dict.values())}
 
 @app.get("/recommend/{user_id}")
 def get_recommendations(request: Request, user_id: str):
@@ -1929,6 +1926,21 @@ async def reject_request(request: Request, request_id: str = Form(...)):
     return RedirectResponse(url="/admin/objects", status_code=303)
 
 
+def _safe_referer(request: Request, default: str = "/rating") -> str:
+    """Referer ヘッダーから自サイトのパスのみ抽出（オープンリダイレクト防止）"""
+    referer = request.headers.get("referer", "")
+    if referer:
+        from urllib.parse import urlparse
+        parsed = urlparse(referer)
+        # 自サイトのパスのみ許可（外部ドメインや空パスは拒否）
+        if parsed.path and not parsed.path.startswith("//"):
+            path = parsed.path
+            if parsed.query:
+                path += "?" + parsed.query
+            return path
+    return default
+
+
 @app.post("/set_group_code")
 async def set_group_code(request: Request, group_code: str = Form("")):
     """ユーザーのグループコードを設定"""
@@ -1941,13 +1953,13 @@ async def set_group_code(request: Request, group_code: str = Form("")):
         with get_db() as conn:
             valid = conn.execute("SELECT 1 FROM group_codes WHERE code = ?", (code,)).fetchone()
         if not valid:
-            referer = request.headers.get("referer", "/rating")
-            return RedirectResponse(url=referer + ("&" if "?" in referer else "?") + "group_error=1", status_code=303)
+            safe_url = _safe_referer(request)
+            return RedirectResponse(url=safe_url + ("&" if "?" in safe_url else "?") + "group_error=1", status_code=303)
 
     with get_db() as conn:
         conn.execute("UPDATE users SET group_code = ? WHERE user_id = ?", (code or None, int(user_id)))
 
-    return RedirectResponse(url=request.headers.get("referer", "/rating"), status_code=303)
+    return RedirectResponse(url=_safe_referer(request), status_code=303)
 
 
 @app.get("/admin/groups", response_class=HTMLResponse)

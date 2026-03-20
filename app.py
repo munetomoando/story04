@@ -662,6 +662,52 @@ async def help_page(request: Request):
     })
 
 
+@app.get("/change_password", response_class=HTMLResponse)
+async def show_change_password_page(request: Request):
+    """パスワード変更ページを表示"""
+    username = request.session.get("username")
+    if not username:
+        return RedirectResponse(url="/", status_code=303)
+    error = request.query_params.get("error", "")
+    success = request.query_params.get("success", "")
+    return templates.TemplateResponse("change_password.html", {
+        "request": request,
+        "username": username,
+        "current_group_code": get_user_group_code(request.session.get("user_id")),
+        "error": error,
+        "success": success,
+    })
+
+
+@app.post("/change_password")
+async def change_password(request: Request, current_password: str = Form(...), new_password: str = Form(...)):
+    """パスワード変更処理"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/", status_code=303)
+
+    import re as _re
+
+    # 新パスワードの強度チェック
+    if len(new_password) < 8 or not _re.search(r'[A-Za-z]', new_password) or not _re.search(r'\d', new_password) or not _re.search(r'[@$!%*#?&]', new_password):
+        return RedirectResponse(url="/change_password?error=weak", status_code=303)
+
+    with get_db() as conn:
+        row = conn.execute("SELECT password_hash FROM users WHERE user_id = ?", (int(user_id),)).fetchone()
+        if not row:
+            return RedirectResponse(url="/", status_code=303)
+
+        # 現在のパスワードを確認
+        if not bcrypt.checkpw(current_password.encode(), row["password_hash"].encode()):
+            return RedirectResponse(url="/change_password?error=wrong", status_code=303)
+
+        # 新パスワードをハッシュ化して更新
+        new_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+        conn.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (new_hash, int(user_id)))
+
+    return RedirectResponse(url="/change_password?success=1", status_code=303)
+
+
 @app.get("/export_my_data")
 async def export_my_data(request: Request):
     """ログインユーザー自身のデータを JSON でダウンロード"""

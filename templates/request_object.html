@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>店舗追加リクエスト</title>
+    <link rel="stylesheet" href="/static/style.css?v=20260320">
+</head>
+<body class="app-page">
+
+<header class="app-header">
+    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">神田三崎町ランチマップ</a>
+</header>
+
+<main class="app-main">
+    <div class="page-card">
+        <h1 class="page-title">店舗追加リクエスト</h1>
+        <p class="page-desc">掲載されていない店舗を運営に提案できます。審査後に追加されます。</p>
+
+        {% if request.query_params.get('success') %}
+        <div class="alert alert-success">リクエストを送信しました。審査をお待ちください。</div>
+        {% endif %}
+
+        {% if error_message is defined and error_message %}
+        <div class="alert alert-error">{{ error_message }}</div>
+        {% endif %}
+
+        <form method="post" action="/request_object" class="request-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label for="object_name" class="form-label">店舗名</label>
+            <input type="text" id="object_name" name="object_name" placeholder="例: 松屋 神田店"
+                   class="form-input" required maxlength="100">
+            <button type="submit" class="btn-primary">リクエストを送信</button>
+        </form>
+
+        {% if user_requests %}
+        <div class="request-history">
+            <h2 class="section-title">過去のリクエスト</h2>
+            <ul class="request-list">
+                {% for req in user_requests %}
+                <li class="request-item">
+                    <span class="request-name">{{ req.object_name }}</span>
+                    <span class="request-status status-{{ req.status }}">
+                        {% if req.status == 'pending' %}審査中
+                        {% elif req.status == 'approved' %}承認済み
+                        {% else %}却下
+                        {% endif %}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</main>
+
+<nav class="bottom-nav">
+    <a href="/rating" class="nav-item">
+        <span class="nav-icon">⭐</span>
+        <span class="nav-label">評価</span>
+    </a>
+    <a href="/recommendations" class="nav-item">
+        <span class="nav-icon">🍽️</span>
+        <span class="nav-label">おすすめ</span>
+    </a>
+    <a href="/map" class="nav-item">
+        <span class="nav-icon">🗺️</span>
+        <span class="nav-label">マップ</span>
+    </a>
+    <a href="/request_object" class="nav-item nav-active">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">リクエスト</span>
+    </a>
+</nav>
+
+</body>
+</html>

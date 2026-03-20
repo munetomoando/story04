@@ -3,193 +3,498 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>評価ページ</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f9fa;
-            text-align: center;
-        }
-
-        .container {
-            width: 80%;
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 10px 15px;
-            margin-bottom: 15px;
-            font-size: 16px;
-            color: white;
-            background-color: #007BFF;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background 0.3s ease;
-        }
-
-        .btn:hover {
-            background-color: #0056b3;
-        }
-
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .rating-options {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .rating-options label {
-            padding: 8px 15px;
-            border: 1px solid #007BFF;
-            border-radius: 5px;
-            background-color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .rating-options input {
-            display: none;
-        }
-
-        .rating-options input:checked + label {
-            background-color: #007BFF;
-            color: white;
-        }
-
-        .cancel-btn {
-            padding: 6px 12px;
-            font-size: 14px;
-            color: white;
-            background-color: #dc3545;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .cancel-btn:hover {
-            background-color: #c82333;
-        }
-
-        .submit-container {
-            margin-top: 20px;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 10px 20px;
-            font-size: 16px;
-            color: white;
-            background-color: #28a745;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .submit-btn:hover {
-            background-color: #218838;
-        }
-    </style>
-    <script>
-        function clearRating(object_id) {
-            let radios = document.getElementsByName("rating_" + object_id);
-            for (let i = 0; i < radios.length; i++) {
-                radios[i].checked = false;
-            }
-
-            // 評価を削除するために hidden input にフラグをセット
-            let deleteInput = document.getElementById("delete_" + object_id);
-            if (deleteInput) {
-                deleteInput.value = "true";
-            }
-        }
-    </script>
+    <title>評価 — ランチマップ</title>
+    <link rel="stylesheet" href="/static/style.css?v=20260320">
 </head>
-<body>
-    <div class="container">
-        <h1>評価ページ</h1>
-        <p>あなたが評価したい対象を選び、5段階で評価してください。</p>
-        
-        <p>現在ログイン中のユーザー: {{ username }}</p>
-        <a href="{{ url_for('show_add_objects_page') }}" class="btn">リストにはない新しい評価対象を追加する</a>
+<body class="app-page">
 
-        <form action="{{ url_for('submit_ratings') }}" method="post" enctype="application/x-www-form-urlencoded">
+<header class="app-header">
+    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">神田三崎町ランチマップ</a>
+    <span class="header-user" onclick="this.querySelector('.header-user-menu').classList.toggle('open')">
+        {{ username }} ▾
+        <div class="header-user-menu" id="user-menu">
+            <a class="header-user-menu-item" href="/help" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">ヘルプ</a>
+            <button class="header-user-menu-item" style="color:#1565c0;" onclick="event.stopPropagation();document.getElementById('group-code-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">グループコード</button>
+            <button class="header-user-menu-item" onclick="event.stopPropagation();document.getElementById('logout-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">ログアウト</button>
+        </div>
+    </span>
+</header>
 
-            
-            <h2>評価を入力してください</h2>
-            <p>1が最低評価、<b>5が最高評価</b>です。</p>  <!-- ⭐️ 説明を追加 -->
-            <p>利用したことがない対象は、<b>未評価（？）のまま</b>にしてください。</p>
+<main class="app-main">
 
-            {% for object_id, object_name in objects.items() %}
-            <div class="rating-box">
-                <span class="store-name">{{ object_name }}</span>
-            
-                <div class="rating-options">
-                    {% set past_rating = past_ratings.get(object_id, None) %}
-                    
-                    <label class="rating-label">
-                        <input type="radio" name="ratings[{{ object_id }}]" value="" {% if past_rating is none %}checked{% endif %}>
-                        <span>？</span>
-                    </label>
-                    <label class="rating-label">
-                        <input type="radio" name="ratings[{{ object_id }}]" value="1" {% if past_rating == 1 %}checked{% endif %}>
-                        <span>1</span>
-                    </label>
-                    <label class="rating-label">
-                        <input type="radio" name="ratings[{{ object_id }}]" value="2" {% if past_rating == 2 %}checked{% endif %}>
-                        <span>2</span>
-                    </label>
-                    <label class="rating-label">
-                        <input type="radio" name="ratings[{{ object_id }}]" value="3" {% if past_rating == 3 %}checked{% endif %}>
-                        <span>3</span>
-                    </label>
-                    <label class="rating-label">
-                        <input type="radio" name="ratings[{{ object_id }}]" value="4" {% if past_rating == 4 %}checked{% endif %}>
-                        <span>4</span>
-                    </label>
-                    <label class="rating-label">
-                        <input type="radio" name="ratings[{{ object_id }}]" value="5" {% if past_rating == 5 %}checked{% endif %}>
-                        <span>5</span>
-                    </label>
+<!-- ===== モード選択（評価済みユーザーのみ表示） ===== -->
+<div id="mode-section" style="display:none;">
+    <h2 class="section-title">どの店舗を評価しますか？</h2>
+    <div id="mode-btn-list" class="mode-btn-list"></div>
+</div>
+
+<!-- ===== カードUI ===== -->
+<div id="card-section" style="display:none;">
+    <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <p class="progress-text" id="progress-text"></p>
+
+    <div id="card-container" class="card-container"></div>
+
+    <div class="card-nav">
+        <button id="btn-back" class="btn-back" onclick="goBack()" disabled>← 戻る</button>
+        <button id="btn-skip" class="btn-skip" onclick="skipCard()">行ったことがない →</button>
+    </div>
+</div>
+
+<!-- ===== 一休み画面 ===== -->
+<div id="break-section" class="done-section" style="display:none;">
+    <div class="done-icon">☕</div>
+    <h2 class="done-title"><span id="break-count">20</span>件の評価が完了！</h2>
+    <p class="done-desc">お疲れさまです。ここまでの評価でおすすめを表示することもできます。</p>
+    <form id="rating-form-break" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
+    <button class="btn-primary" onclick="submitRatingsBreak()">ここまでの評価でおすすめを見る</button>
+    <button class="btn-secondary" onclick="continueRating()">まだ続ける（残り <span id="break-remaining">0</span> 件）</button>
+</div>
+
+<!-- ===== 完了画面 ===== -->
+<div id="done-section" class="done-section" style="display:none;">
+    <div class="done-icon">✅</div>
+    <h2 class="done-title">すべて評価しました！</h2>
+    <p class="done-desc">評価を送信しておすすめを確認しましょう。</p>
+    <form id="rating-form" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <!-- JSが動的にhidden inputを追加 -->
+    </form>
+    <button class="btn-primary" onclick="submitRatings()">評価を送信しておすすめを見る</button>
+    <button class="btn-secondary" onclick="showRatedList()">評価済み一覧を確認・修正する</button>
+</div>
+
+<!-- ===== 評価済み一覧（修正用） ===== -->
+<div id="rated-section" style="display:none;">
+    <h2 class="section-title">評価済みの店舗</h2>
+    <div id="rated-list"></div>
+    <button class="btn-primary" onclick="submitRatings()">評価を送信</button>
+    <button class="btn-secondary" onclick="backToDone()">戻る</button>
+</div>
+
+<!-- ===== すべての店一覧（見直しモード） ===== -->
+<div id="all-list-section" style="display:none;">
+    <h2 class="section-title">すべての店舗を評価・見直す</h2>
+    <div id="all-list"></div>
+    <form id="rating-form3" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
+    <button class="btn-primary" onclick="submitRatings3()">評価を送信しておすすめを見る</button>
+    <button class="btn-secondary" onclick="showModeSection()">← モード選択に戻る</button>
+</div>
+
+<!-- 評価がない場合の送信ボタン（未評価ゼロのとき） -->
+<div id="no-unrated-section" style="display:none;" class="done-section">
+    <div class="done-icon">🎉</div>
+    <h2 class="done-title">評価済みの店舗</h2>
+    <p class="done-desc">すべての店舗に評価があります。変更する場合は下の一覧から修正してください。</p>
+    <div id="no-unrated-list"></div>
+    <form id="rating-form2" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
+    <button class="btn-primary" onclick="submitRatings2()">評価を更新して送信</button>
+</div>
+
+<!-- 口コミ投稿リンク -->
+<div style="text-align:center; padding:16px 0 8px;">
+    <a href="/post_review" style="color:#1565c0; font-size:14px; font-weight:bold; text-decoration:none;">口コミを投稿する →</a>
+</div>
+
+</main>
+
+<nav class="bottom-nav">
+    <a href="/rating" class="nav-item nav-active">
+        <span class="nav-icon">⭐</span>
+        <span class="nav-label">評価</span>
+    </a>
+    <a href="/recommendations" class="nav-item">
+        <span class="nav-icon">🍽️</span>
+        <span class="nav-label">おすすめ</span>
+    </a>
+    <a href="/map" class="nav-item">
+        <span class="nav-icon">🗺️</span>
+        <span class="nav-label">マップ</span>
+    </a>
+    <a href="/request_object" class="nav-item">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">リクエスト</span>
+    </a>
+</nav>
+
+<script>
+// ---- サーバーから渡されたデータ ----
+const UNRATED = {{ unrated_objects | tojson }};
+const RATED   = {{ rated_objects | tojson }};
+
+// ---- ユーザー別にsessionStorageキーをスコープ ----
+const SESSION_KEY = 'ratingSelections_{{ username }}';
+
+// ---- 状態管理 ----
+let currentIndex = 0;
+let currentQueue = [];   // モードに応じて設定されるカードキュー
+const selections = {};   // { object_id: rating_value }
+
+// 評価済みは初期値としてセット
+RATED.forEach(r => { selections[r.id] = r.rating; });
+
+// 新規店舗モードは廃止（IDベースの判定が不正確なため）
+
+// ---- 起動 ----
+window.addEventListener('DOMContentLoaded', () => {
+    // sessionStorage から復元（同一ユーザーのみ）
+    // ただしサーバーから渡された RATED の値を優先
+    try {
+        const saved = sessionStorage.getItem(SESSION_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            // sessionStorage の値を適用するが、RATED の値で上書き
+            Object.assign(selections, parsed);
+            RATED.forEach(r => { selections[r.id] = r.rating; });
+        }
+    } catch(e) {}
+
+    if (RATED.length > 0) {
+        // 評価済みユーザー → モード選択画面
+        showModeSection();
+    } else if (UNRATED.length === 0) {
+        // 全店舗評価済み
+        showNoUnrated();
+    } else {
+        // 初回ユーザー → そのまま未評価カード
+        startMode('unrated');
+    }
+
+    // ---- タッチスワイプ検出 ----
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const cardSection = document.getElementById('card-section');
+    cardSection.addEventListener('touchstart', e => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    cardSection.addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        if (dx > 0) {
+            goBack();
+        } else {
+            skipCard();
+        }
+    }, { passive: true });
+});
+
+// ---- モード選択画面 ----
+function showModeSection() {
+    hideAllSections();
+    document.getElementById('mode-section').style.display = 'block';
+
+    const list = document.getElementById('mode-btn-list');
+    const modes = [];
+
+    if (UNRATED.length > 0) {
+        modes.push({
+            label: '未評価の店を評価する',
+            count: UNRATED.length,
+            icon: '⭐',
+            mode: 'unrated'
+        });
+    }
+    modes.push({
+        label: 'すべての店を評価・見直す',
+        count: UNRATED.length + RATED.length,
+        icon: '📋',
+        mode: 'all'
+    });
+
+    list.innerHTML = modes.map(m => `
+        <button class="mode-btn" onclick="startMode('${m.mode}')">
+            <span class="mode-btn-icon">${m.icon}</span>
+            <span class="mode-btn-label">${m.label}</span>
+            <span class="mode-btn-count">${m.count}件</span>
+        </button>
+    `).join('');
+}
+
+// ---- モード開始 ----
+function startMode(mode) {
+    if (mode === 'all') {
+        // 一覧表示モード
+        hideAllSections();
+        document.getElementById('all-list-section').style.display = 'block';
+        renderRatedListIn('all-list', 'rating-form3');
+        return;
+    }
+
+    currentQueue = UNRATED;
+
+    if (currentQueue.length === 0) {
+        showNoUnrated();
+        return;
+    }
+
+    currentIndex = 0;
+    hideAllSections();
+    document.getElementById('card-section').style.display = 'block';
+    showCard(0);
+}
+
+function hideAllSections() {
+    ['mode-section', 'card-section', 'done-section', 'rated-section', 'no-unrated-section', 'all-list-section', 'break-section']
+        .forEach(id => document.getElementById(id).style.display = 'none');
+}
+
+// ---- カード表示 ----
+function updateProgress() {
+    const total = currentQueue.length;
+    const current = currentIndex + 1;
+    const pct = total > 0 ? (current / total) * 100 : 100;
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = `${current} / ${total} 店舗`;
+    const btnBack = document.getElementById('btn-back');
+    if (btnBack) btnBack.disabled = (currentIndex === 0);
+}
+
+function buildCard(obj, extraClass) {
+    const saved = selections[obj.id];
+    const imgHtml = obj.image_url
+        ? `<img src="${obj.image_url}" class="card-store-img" alt="${obj.name}">`
+        : '';
+    return `
+        <div class="rating-card ${extraClass || ''}" id="card-${obj.id}">
+            ${imgHtml}
+            <div class="card-store-name">${obj.name}</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:4px;padding:0 4px;">
+                <span>低い</span><span>高い</span>
+            </div>
+            <div class="rating-btn-group">
+                ${[1,2,3,4,5].map(v => `
+                <button class="rating-btn ${saved == v ? 'selected' : ''}"
+                        data-value="${v}"
+                        onclick="selectRating('${obj.id}', ${v})">
+                    ${v}
+                </button>`).join('')}
+            </div>
+        </div>`;
+}
+
+const BREAK_EVERY = 20;  // 何件ごとに休憩を挟むか
+let ratedInSession = 0;   // このセッションで評価した件数
+
+function showCard(index) {
+    const container = document.getElementById('card-container');
+    if (index >= currentQueue.length) {
+        finishCards();
+        return;
+    }
+    // 20件ごとに休憩画面を表示
+    if (ratedInSession > 0 && ratedInSession % BREAK_EVERY === 0 && ratedInSession !== lastBreakAt) {
+        lastBreakAt = ratedInSession;
+        showBreak(index);
+        return;
+    }
+    container.innerHTML = buildCard(currentQueue[index], '');
+    currentIndex = index;
+    updateProgress();
+}
+let lastBreakAt = -1;
+
+function showBreak(resumeIndex) {
+    hideAllSections();
+    document.getElementById('break-count').textContent = ratedInSession;
+    document.getElementById('break-remaining').textContent = currentQueue.length - resumeIndex;
+    document.getElementById('break-section').style.display = 'block';
+    // 「続ける」で再開するインデックスを保存
+    window._breakResumeIndex = resumeIndex;
+}
+
+function continueRating() {
+    hideAllSections();
+    document.getElementById('card-section').style.display = 'block';
+    showCard(window._breakResumeIndex);
+}
+
+function submitRatingsBreak() {
+    buildFormInputs('rating-form-break');
+    try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+    document.getElementById('rating-form-break').submit();
+}
+
+function showCardBack(index) {
+    const container = document.getElementById('card-container');
+    if (index < 0 || index >= currentQueue.length) return;
+    container.innerHTML = buildCard(currentQueue[index], 'card-slide-back');
+    currentIndex = index;
+    updateProgress();
+}
+
+function selectRating(objectId, value) {
+    selections[objectId] = value;
+    ratedInSession++;
+    saveToSession();
+
+    document.querySelectorAll('.rating-btn').forEach(btn => {
+        btn.classList.toggle('selected', parseInt(btn.dataset.value) === value);
+    });
+
+    setTimeout(() => {
+        currentIndex++;
+        showCard(currentIndex);
+    }, 300);
+}
+
+function skipCard() {
+    const obj = currentQueue[currentIndex];
+    delete selections[obj.id];
+    saveToSession();
+    currentIndex++;
+    showCard(currentIndex);
+}
+
+function goBack() {
+    if (currentIndex <= 0) return;
+    currentIndex--;
+    showCardBack(currentIndex);
+}
+
+function finishCards() {
+    hideAllSections();
+    document.getElementById('done-section').style.display = 'block';
+}
+
+function showNoUnrated() {
+    hideAllSections();
+    document.getElementById('no-unrated-section').style.display = 'block';
+    renderRatedListIn('no-unrated-list', 'rating-form2');
+}
+
+function showRatedList() {
+    hideAllSections();
+    document.getElementById('rated-section').style.display = 'block';
+    renderRatedListIn('rated-list', 'rating-form');
+}
+
+function backToDone() {
+    hideAllSections();
+    document.getElementById('done-section').style.display = 'block';
+}
+
+function renderRatedListIn(containerId, formId) {
+    const container = document.getElementById(containerId);
+    const allObjects = [...UNRATED, ...RATED];
+    container.innerHTML = allObjects.map(obj => {
+        const val = selections[obj.id] || '';
+        return `
+        <div class="rated-item">
+            <span class="rated-name">${obj.name}</span>
+            <div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:#888;padding:0 2px 2px;">
+                    <span>低い</span><span>高い</span>
+                </div>
+                <div class="rated-btn-group">
+                    ${[1,2,3,4,5].map(v => `
+                    <button type="button"
+                            class="rating-btn small ${val == v ? 'selected' : ''}"
+                            onclick="changeRating('${obj.id}', ${v}, this)">
+                        ${v}
+                    </button>`).join('')}
+                    <button type="button" class="btn-unrated ${!val ? 'active' : ''}"
+                            onclick="clearRating('${obj.id}')"
+                            style="width:auto;padding:0 8px;font-size:11px;">未評価</button>
                 </div>
             </div>
-            {% endfor %}
+        </div>`;
+    }).join('');
+}
 
-            <div class="submit-container">
-                <button type="submit" class="submit-btn">評価を送信</button>
+function changeRating(objectId, value, el) {
+    selections[objectId] = value;
+    saveToSession();
+    const group = el.closest('.rated-btn-group');
+    group.querySelectorAll('.rating-btn').forEach(btn => {
+        btn.classList.toggle('selected', parseInt(btn.dataset.value || btn.textContent.trim()) === value);
+    });
+    const unratedBtn = group.querySelector('.btn-unrated');
+    if (unratedBtn) unratedBtn.classList.remove('active');
+}
+
+function clearRating(objectId) {
+    delete selections[objectId];
+    saveToSession();
+    document.querySelectorAll(`[onclick*="'${objectId}'"]`).forEach(btn => {
+        if (btn.classList.contains('rating-btn')) btn.classList.remove('selected');
+        if (btn.classList.contains('btn-unrated')) btn.classList.add('active');
+    });
+}
+
+function buildFormInputs(formId) {
+    const form = document.getElementById(formId);
+    // CSRFトークン以外のhidden inputを削除
+    form.querySelectorAll('input[type=hidden]:not([name=csrf_token])').forEach(el => el.remove());
+    Object.entries(selections).forEach(([id, val]) => {
+        if (val) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = `ratings[${id}]`;
+            input.value = val;
+            form.appendChild(input);
+        }
+    });
+}
+
+function clearSession() {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
+
+function submitRatings() {
+    buildFormInputs('rating-form');
+    clearSession();
+    document.getElementById('rating-form').submit();
+}
+
+function submitRatings2() {
+    buildFormInputs('rating-form2');
+    clearSession();
+    document.getElementById('rating-form2').submit();
+}
+
+function submitRatings3() {
+    buildFormInputs('rating-form3');
+    clearSession();
+    document.getElementById('rating-form3').submit();
+}
+
+function saveToSession() {
+    try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(selections));
+    } catch(e) {}
+}
+</script>
+
+
+<!-- グループコード入力モーダル -->
+<div class="logout-overlay" id="group-code-modal">
+    <div class="logout-card">
+        <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
+        <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
+        <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="group_code" placeholder="グループコード"
+                value="{{ current_group_code or '' }}"
+                style="display:block;width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:14px;box-sizing:border-box;">
+            <div class="logout-card-actions">
+                <button type="button" class="btn-logout-cancel" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
+                <button type="submit" class="btn-logout-confirm" style="background:#1565c0;">保存</button>
             </div>
         </form>
-        <form action="/recommendations" method="get" class="recommend-btn-container">
-            <button type="submit" class="recommend-btn">評価を変えずに、お勧めを確認する</button>
-        </form>
     </div>
-    <!-- JavaScript を追加 -->
-<script>
-    function clearRating(objectId) {
-        // すべてのラジオボタンを未選択にする
-        document.querySelectorAll(`input[name='ratings[${objectId}]']`).forEach(input => input.checked = false);
-        
-        // 削除フラグを立てる
-        document.getElementById(`delete_${objectId}`).value = "true";
-    }
-    </script>
+</div>
+<!-- ログアウト確認モーダル -->
+<div class="logout-overlay" id="logout-modal">
+    <div class="logout-card">
+        <div class="logout-card-title">ログアウト</div>
+        <div class="logout-card-msg">ログアウトしますか？</div>
+        <div class="logout-card-actions">
+            <button class="btn-logout-cancel" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
+            <form method="post" action="/logout" style="display:inline;margin:0;flex:1;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-logout-confirm" style="width:100%;">ログアウト</button></form>
+        </div>
+    </div>
+</div>
 </body>
 </html>

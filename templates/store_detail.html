@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ store.object_name }} — ランチマップ</title>
+    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="">
+    <style>
+        .store-hero {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            border-radius: 12px;
+            display: block;
+            margin-bottom: 16px;
+        }
+        .store-hero-placeholder {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #e8f5e9;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #a5d6a7;
+            margin-bottom: 16px;
+        }
+        .store-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1b5e20;
+            margin: 0 0 16px;
+            text-align: center;
+        }
+        #detail-map {
+            width: 100%;
+            height: 200px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .no-location {
+            width: 100%;
+            height: 120px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 16px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #2e7d32;
+            background: white;
+            border: 2px solid #2e7d32;
+            border-radius: 10px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .back-btn:active { background: #e8f5e9; }
+
+        /* ===== 評価分布 ===== */
+        .rating-dist {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .dist-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .dist-row:last-child { margin-bottom: 0; }
+        .dist-stars {
+            font-size: 13px;
+            color: #f59e0b;
+            width: 70px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .dist-bar-wrap {
+            flex: 1;
+            height: 16px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .dist-bar {
+            height: 100%;
+            background: #f59e0b;
+            border-radius: 8px;
+            transition: width 0.3s;
+        }
+        .dist-count {
+            font-size: 13px;
+            color: #666;
+            width: 32px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .dist-total {
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+            margin-top: 8px;
+        }
+
+        /* ===== 口コミ ===== */
+        .comment-section { margin-bottom: 16px; }
+        .comment-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .comment-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .comment-user {
+            font-size: 13px;
+            font-weight: bold;
+            color: #1b5e20;
+        }
+        .comment-date {
+            font-size: 11px;
+            color: #aaa;
+        }
+        .comment-body {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .comment-empty {
+            text-align: center;
+            color: #aaa;
+            font-size: 13px;
+            padding: 20px 0;
+        }
+        .btn-write-review {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #1565c0;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 16px;
+        }
+        .btn-write-review:active { background: #0d47a1; }
+        .comment-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-edit-review {
+            background: none;
+            border: 1px solid #2e7d32;
+            color: #2e7d32;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-edit-review:active { background: #e8f5e9; }
+        .btn-delete-review {
+            background: none;
+            border: 1px solid #e57373;
+            color: #e57373;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-delete-review:active { background: #ffebee; }
+        .btn-report-review {
+            background: none;
+            border: 1px solid #bbb;
+            color: #999;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .btn-report-review:active { background: #f5f5f5; }
+
+        /* 通報モーダル */
+        .report-overlay {
+            display: none;
+        }
+        .report-overlay.open {
+            display: flex;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        .report-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            padding: 24px 20px 20px;
+            width: 300px;
+        }
+        .report-card-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #c62828;
+            margin: 0 0 14px;
+        }
+        .report-reason-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 12px;
+        }
+        .report-reason-list li {
+            margin-bottom: 8px;
+        }
+        .report-reason-list label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #333;
+            cursor: pointer;
+        }
+        .report-reason-list input[type="radio"] {
+            accent-color: #c62828;
+        }
+        .report-free-text {
+            display: none;
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 60px;
+            margin-bottom: 12px;
+        }
+        .report-free-text.show { display: block; }
+        .report-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .report-actions button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-report-submit { background: #c62828; color: white; }
+        .btn-report-submit:active { background: #b71c1c; }
+        .btn-report-submit:disabled { background: #ccc; color: #888; }
+        .btn-report-cancel { background: #f5f5f5; color: #333; }
+        .btn-report-cancel:active { background: #e0e0e0; }
+        .comment-mine-badge {
+            font-size: 11px;
+            color: #2e7d32;
+            background: #e8f5e9;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="app-page">
+
+<header class="app-header">
+    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">神田三崎町ランチマップ</a>
+    <span class="header-user" onclick="this.querySelector('.header-user-menu').classList.toggle('open')">
+        {{ username }} ▾
+        <div class="header-user-menu" id="user-menu">
+            <a class="header-user-menu-item" href="/help" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">ヘルプ</a>
+            <button class="header-user-menu-item" style="color:#1565c0;" onclick="event.stopPropagation();document.getElementById('group-code-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">グループコード</button>
+            <button class="header-user-menu-item" onclick="event.stopPropagation();document.getElementById('logout-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">ログアウト</button>
+        </div>
+    </span>
+</header>
+
+<main class="app-main">
+    <a href="#" class="back-btn" onclick="history.back(); return false;">← 戻る</a>
+
+    {% if store.image_url %}
+    <img src="{{ store.image_url }}" alt="{{ store.object_name }}" class="store-hero">
+    {% else %}
+    <div class="store-hero-placeholder">🍽️</div>
+    {% endif %}
+
+    <h1 class="store-title">{{ store.object_name }}</h1>
+
+    {% if store.latitude and store.longitude %}
+    <div id="detail-map"></div>
+    {% else %}
+    <div class="no-location">位置情報が登録されていません</div>
+    {% endif %}
+
+    <!-- 評価分布 -->
+    <section>
+        <h2 class="section-title">みんなの評価</h2>
+        {% if total_ratings > 0 %}
+        <div class="rating-dist">
+            {% for d in rating_distribution %}
+            <div class="dist-row">
+                <span class="dist-stars">{{ "★" * d.stars }}{{ "☆" * (5 - d.stars) }}</span>
+                <div class="dist-bar-wrap">
+                    <div class="dist-bar" style="width: {{ (d.count / total_ratings * 100) | round(1) }}%"></div>
+                </div>
+                <span class="dist-count">{{ d.count }}人</span>
+            </div>
+            {% endfor %}
+            <div class="dist-total">{{ total_ratings }}人が評価</div>
+        </div>
+        {% else %}
+        <div class="rating-dist">
+            <div class="dist-total">まだ評価がありません</div>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- 口コミ -->
+    <section class="comment-section">
+        <h2 class="section-title">口コミ（{{ comments | length }}件）</h2>
+        <a href="/post_review?object_id={{ store.object_id }}" class="btn-write-review">口コミを投稿する</a>
+        {% if comments %}
+        <ul class="comment-list">
+            {% for c in comments %}
+            <li class="comment-card">
+                <div class="comment-header">
+                    <span class="comment-date">{{ c.created_at }}</span>
+                    {% if c.is_mine %}<span class="comment-mine-badge">自分の投稿</span>{% endif %}
+                </div>
+                <div class="comment-body">{{ c.comment }}</div>
+                {% if c.is_mine %}
+                <div class="comment-actions">
+                    <a href="/edit_review/{{ c.review_id }}" class="btn-edit-review">編集</a>
+                    <form method="post" action="/delete_review" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="review_id" value="{{ c.review_id }}">
+                        <button type="submit" class="btn-delete-review"
+                                onclick="return confirm('この口コミを削除しますか？')">削除</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="comment-actions">
+                    <button type="button" class="btn-report-review"
+                            onclick="openReportModal({{ c.review_id }})">通報</button>
+                </div>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="comment-empty">まだ口コミがありません。最初の投稿者になりましょう！</div>
+        {% endif %}
+    </section>
+</main>
+
+<nav class="bottom-nav">
+    <a href="/rating" class="nav-item">
+        <span class="nav-icon">⭐</span>
+        <span class="nav-label">評価</span>
+    </a>
+    <a href="/recommendations" class="nav-item">
+        <span class="nav-icon">🍽️</span>
+        <span class="nav-label">おすすめ</span>
+    </a>
+    <a href="/map" class="nav-item">
+        <span class="nav-icon">🗺️</span>
+        <span class="nav-label">マップ</span>
+    </a>
+    <a href="/request_object" class="nav-item">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">リクエスト</span>
+    </a>
+</nav>
+
+{% if store.latitude and store.longitude %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+<script>
+const lat = {{ store.latitude }};
+const lng = {{ store.longitude }};
+const map = L.map('detail-map').setView([lat, lng], 17);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+}).addTo(map);
+L.marker([lat, lng]).addTo(map);
+</script>
+{% endif %}
+
+
+<!-- グループコード入力モーダル -->
+<div class="logout-overlay" id="group-code-modal">
+    <div class="logout-card">
+        <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
+        <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
+        <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="group_code" placeholder="グループコード"
+                value="{{ current_group_code or '' }}"
+                style="display:block;width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:14px;box-sizing:border-box;">
+            <div class="logout-card-actions">
+                <button type="button" class="btn-logout-cancel" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
+                <button type="submit" class="btn-logout-confirm" style="background:#1565c0;">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ログアウト確認モーダル -->
+<!-- 通報モーダル -->
+<div class="report-overlay" id="report-modal">
+    <div class="report-card">
+        <div class="report-card-title">口コミを通報</div>
+        <form method="post" action="/report_review" id="report-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="review_id" id="report-review-id" value="">
+            <input type="hidden" name="reason" id="report-reason-value" value="">
+            <ul class="report-reason-list">
+                <li><label><input type="radio" name="reason_select" value="誹謗中傷・攻撃的な表現" onchange="selectReason(this)"> 誹謗中傷・攻撃的な表現</label></li>
+                <li><label><input type="radio" name="reason_select" value="個人情報の記載" onchange="selectReason(this)"> 個人情報の記載</label></li>
+                <li><label><input type="radio" name="reason_select" value="宣伝・スパム" onchange="selectReason(this)"> 宣伝・スパム</label></li>
+                <li><label><input type="radio" name="reason_select" value="店舗と無関係な内容" onchange="selectReason(this)"> 店舗と無関係な内容</label></li>
+                <li><label><input type="radio" name="reason_select" value="不快・不適切な表現" onchange="selectReason(this)"> 不快・不適切な表現</label></li>
+                <li><label><input type="radio" name="reason_select" value="other" onchange="selectReason(this)"> その他</label></li>
+            </ul>
+            <textarea class="report-free-text" id="report-free-text" placeholder="理由を入力してください" maxlength="200"></textarea>
+            <div class="report-actions">
+                <button type="button" class="btn-report-cancel" onclick="closeReportModal()">キャンセル</button>
+                <button type="submit" class="btn-report-submit" id="btn-report-submit" disabled>通報する</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openReportModal(reviewId) {
+    document.getElementById('report-review-id').value = reviewId;
+    document.getElementById('report-modal').classList.add('open');
+    // リセット
+    document.querySelectorAll('input[name="reason_select"]').forEach(r => r.checked = false);
+    document.getElementById('report-free-text').classList.remove('show');
+    document.getElementById('report-free-text').value = '';
+    document.getElementById('btn-report-submit').disabled = true;
+    document.getElementById('report-reason-value').value = '';
+}
+function closeReportModal() {
+    document.getElementById('report-modal').classList.remove('open');
+}
+function selectReason(el) {
+    const freeText = document.getElementById('report-free-text');
+    const submitBtn = document.getElementById('btn-report-submit');
+    if (el.value === 'other') {
+        freeText.classList.add('show');
+        freeText.focus();
+        submitBtn.disabled = false;
+    } else {
+        freeText.classList.remove('show');
+        freeText.value = '';
+        submitBtn.disabled = false;
+    }
+    document.getElementById('report-reason-value').value = el.value;
+}
+document.getElementById('report-form').addEventListener('submit', function(e) {
+    const selected = document.querySelector('input[name="reason_select"]:checked');
+    if (!selected) { e.preventDefault(); return; }
+    const reasonField = document.getElementById('report-reason-value');
+    if (selected.value === 'other') {
+        const freeText = document.getElementById('report-free-text').value.trim();
+        reasonField.value = freeText || 'その他';
+    } else {
+        reasonField.value = selected.value;
+    }
+});
+
+// 通報完了ポップアップ
+if (new URLSearchParams(location.search).get('reported') === '1') {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:28px 24px 20px;width:280px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.25);">' +
+        '<div style="font-size:36px;margin-bottom:12px;">&#x2714;&#xFE0F;</div>' +
+        '<div style="font-size:16px;font-weight:bold;color:#1b5e20;margin-bottom:8px;">ご協力ありがとうございました。</div>' +
+        '<div style="font-size:13px;color:#666;margin-bottom:20px;">通報内容を確認し、適切に対応いたします。</div>' +
+        '<button onclick="this.closest(\'div\').parentElement.remove();history.replaceState(null,\'\',location.pathname)" style="width:100%;padding:10px;background:#2e7d32;color:white;border:none;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;">閉じる</button>' +
+        '</div>';
+    document.body.appendChild(overlay);
+}
+</script>
+
+<div class="logout-overlay" id="logout-modal">
+    <div class="logout-card">
+        <div class="logout-card-title">ログアウト</div>
+        <div class="logout-card-msg">ログアウトしますか？</div>
+        <div class="logout-card-actions">
+            <button class="btn-logout-cancel" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
+            <form method="post" action="/logout" style="display:inline;margin:0;flex:1;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-logout-confirm" style="width:100%;">ログアウト</button></form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

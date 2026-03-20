@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ユーザー管理 — 管理者</title>
+  <style>
+    body { background: #f4f6f8; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .admin-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { color: #1b5e20; font-size: 22px; margin-bottom: 4px; }
+    .nav-links { margin-bottom: 20px; font-size: 13px; }
+    .nav-links a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
+    .nav-links a:hover { text-decoration: underline; }
+    .count-badge {
+      display: inline-block; background: #2e7d32; color: white;
+      font-size: 12px; padding: 2px 10px; border-radius: 12px; margin-left: 8px;
+    }
+    .table-wrap {
+      overflow: auto; max-height: 80vh;
+      border: 1px solid #ddd; border-radius: 8px;
+    }
+    .users-table {
+      width: 100%; border-collapse: collapse; background: white;
+    }
+    .users-table th, .users-table td {
+      border: 1px solid #e0e0e0; padding: 5px 8px; font-size: 12px;
+    }
+    .users-table th {
+      background: #f4f4f4; font-weight: bold; text-align: center;
+      white-space: nowrap; position: sticky; top: 0; z-index: 1;
+    }
+    .users-table td { text-align: center; }
+    .td-name { text-align: left !important; font-weight: bold; }
+    .sort-link { color: #1b5e20; text-decoration: none; }
+    .sort-link:hover { text-decoration: underline; }
+    .sort-active { font-weight: bold; color: #000; }
+    .sort-arrow { font-size: 10px; margin-left: 2px; }
+
+    /* ステータスバッジ */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; }
+    .badge-warned { background: #fff3e0; color: #e65100; }
+    .badge-banned { background: #ffebee; color: #c62828; }
+
+    /* 行のハイライト */
+    tr.row-warned { background: #fffde7 !important; }
+    tr.row-banned { background: #fce4ec !important; }
+
+    /* 操作ボタン */
+    .btn-sm {
+      border: none; padding: 3px 10px; border-radius: 4px;
+      font-size: 11px; cursor: pointer; white-space: nowrap;
+    }
+    .btn-warn { background: #ff9800; color: white; }
+    .btn-warn:hover { background: #e65100; }
+    .btn-ban { background: #c62828; color: white; }
+    .btn-ban:hover { background: #b71c1c; }
+    .btn-del { background: #424242; color: white; }
+    .btn-del:hover { background: #212121; }
+    .btn-restore { background: #2e7d32; color: white; }
+    .btn-restore:hover { background: #1b5e20; }
+    .action-cell { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+
+    /* ページネーション */
+    .pagination {
+      display: flex; justify-content: center; align-items: center;
+      gap: 4px; margin: 16px 0; flex-wrap: wrap;
+    }
+    .pagination a, .pagination span {
+      display: inline-block; padding: 4px 10px; border-radius: 6px;
+      font-size: 13px; text-decoration: none; border: 1px solid #ddd;
+    }
+    .pagination a { color: #2e7d32; background: white; }
+    .pagination a:hover { background: #e8f5e9; }
+    .pagination .current { background: #2e7d32; color: white; border-color: #2e7d32; font-weight: bold; }
+    .pagination .disabled { color: #ccc; background: #f9f9f9; pointer-events: none; }
+    .pagination .info { border: none; color: #888; font-size: 12px; }
+  </style>
+</head>
+<body>
+<div class="admin-wrap">
+  <h1>ユーザー管理 <span class="count-badge">{{ total_count }}人</span></h1>
+  <div class="nav-links">
+    <a href="/admin/dashboard">ダッシュボード</a>
+    <a href="/admin/reviews">レビュー管理</a>
+    <a href="/admin/objects">店舗管理</a>
+    <a href="/admin/comments">口コミ管理</a>
+    <a href="/admin/groups">グループ管理</a>
+    <a href="/admin/heatmap">ユーザー分析</a>
+    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+  </div>
+
+  {% macro sort_header(label, key_asc, key_desc) %}
+    {% if current_sort == key_asc %}
+      <a href="/admin/users?sort={{ key_desc }}" class="sort-link sort-active">{{ label }} <span class="sort-arrow">▲</span></a>
+    {% elif current_sort == key_desc %}
+      <a href="/admin/users?sort={{ key_asc }}" class="sort-link sort-active">{{ label }} <span class="sort-arrow">▼</span></a>
+    {% else %}
+      <a href="/admin/users?sort={{ key_asc }}" class="sort-link">{{ label }}</a>
+    {% endif %}
+  {% endmacro %}
+
+  <div class="table-wrap">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>{{ sort_header('ID', 'id_asc', 'id_desc') }}</th>
+          <th>{{ sort_header('ユーザー名', 'name_asc', 'name_desc') }}</th>
+          <th>{{ sort_header('登録日', 'created_asc', 'created_desc') }}</th>
+          <th>{{ sort_header('最終ログイン', 'last_login_asc', 'last_login_desc') }}</th>
+          <th>{{ sort_header('ログイン回数', 'login_count_asc', 'login_count_desc') }}</th>
+          <th>{{ sort_header('評価数', 'rating_count_asc', 'rating_count_desc') }}</th>
+          <th>{{ sort_header('口コミ数', 'review_count_asc', 'review_count_desc') }}</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr{% if u.status == 'warned' %} class="row-warned"{% elif u.status == 'banned' %} class="row-banned"{% endif %}>
+          <td>{{ u.user_id }}</td>
+          <td class="td-name">
+            {{ u.username }}
+            {% if u.status == 'warned' %}<span class="badge badge-warned">警告</span>{% endif %}
+            {% if u.status == 'banned' %}<span class="badge badge-banned">凍結</span>{% endif %}
+          </td>
+          <td>{{ u.created_at }}</td>
+          <td>{{ u.last_login }}</td>
+          <td>{{ u.login_count }}</td>
+          <td>{{ u.rating_count }}</td>
+          <td>{{ u.review_count }}</td>
+          <td>
+            <div class="action-cell">
+              {% if u.status == 'banned' %}
+                {# 凍結中 → 復帰 or 削除 #}
+                <form method="post" action="/admin/users/restore" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="user_id" value="{{ u.user_id }}">
+                  <button type="submit" class="btn-sm btn-restore" onclick="return confirm('{{ u.username }} を復帰させますか？')">復帰</button>
+                </form>
+                <form method="post" action="/admin/users/delete" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="user_id" value="{{ u.user_id }}">
+                  <button type="submit" class="btn-sm btn-del" onclick="return confirm('{{ u.username }} を完全に削除しますか？\nこの操作は取り消せません。')">削除</button>
+                </form>
+              {% elif u.status == 'warned' %}
+                {# 警告中 → 凍結 or 復帰 #}
+                <form method="post" action="/admin/users/ban" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="user_id" value="{{ u.user_id }}">
+                  <button type="submit" class="btn-sm btn-ban" onclick="return confirm('{{ u.username }} を凍結しますか？\nログインできなくなります。')">凍結</button>
+                </form>
+                <form method="post" action="/admin/users/restore" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="user_id" value="{{ u.user_id }}">
+                  <button type="submit" class="btn-sm btn-restore" onclick="return confirm('{{ u.username }} の警告を解除しますか？')">解除</button>
+                </form>
+              {% else %}
+                {# 通常 → 警告 #}
+                <form method="post" action="/admin/users/warn" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="user_id" value="{{ u.user_id }}">
+                  <button type="submit" class="btn-sm btn-warn" onclick="return confirm('{{ u.username }} に警告を付与しますか？')">警告</button>
+                </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    <span class="info">{{ current_page }}/{{ total_pages }}ページ</span>
+    {% if current_page > 1 %}
+      <a href="/admin/users?sort={{ current_sort }}&page=1">&laquo;</a>
+      <a href="/admin/users?sort={{ current_sort }}&page={{ current_page - 1 }}">&lsaquo;</a>
+    {% else %}
+      <span class="disabled">&laquo;</span>
+      <span class="disabled">&lsaquo;</span>
+    {% endif %}
+    {% for p in range(1, total_pages + 1) %}
+      {% if p == current_page %}
+        <span class="current">{{ p }}</span>
+      {% elif p <= 3 or p > total_pages - 3 or (p >= current_page - 2 and p <= current_page + 2) %}
+        <a href="/admin/users?sort={{ current_sort }}&page={{ p }}">{{ p }}</a>
+      {% elif p == 4 or p == total_pages - 3 %}
+        <span class="info">…</span>
+      {% endif %}
+    {% endfor %}
+    {% if current_page < total_pages %}
+      <a href="/admin/users?sort={{ current_sort }}&page={{ current_page + 1 }}">&rsaquo;</a>
+      <a href="/admin/users?sort={{ current_sort }}&page={{ total_pages }}">&raquo;</a>
+    {% else %}
+      <span class="disabled">&rsaquo;</span>
+      <span class="disabled">&raquo;</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>

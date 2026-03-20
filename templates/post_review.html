@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>口コミ投稿 — ランチマップ</title>
+    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <style>
+        .review-form-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .review-form-title {
+            font-size: 20px;
+            color: #1b5e20;
+            margin: 0 0 8px;
+        }
+        .review-form-desc {
+            font-size: 13px;
+            color: #666;
+            margin: 0 0 20px;
+        }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 6px;
+        }
+        .form-select {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #a5d6a7;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 16px;
+            outline: none;
+            background: white;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .form-select:focus { border-color: #2e7d32; }
+        .form-textarea {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #a5d6a7;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 16px;
+            outline: none;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+        .form-textarea:focus { border-color: #2e7d32; }
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: -12px;
+            margin-bottom: 16px;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 16px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #2e7d32;
+            background: white;
+            border: 2px solid #2e7d32;
+            border-radius: 10px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .back-btn:active { background: #e8f5e9; }
+        .edit-notice {
+            font-size: 13px;
+            color: #1565c0;
+            background: #e3f2fd;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body class="app-page">
+
+<header class="app-header">
+    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">神田三崎町ランチマップ</a>
+    <span class="header-user" onclick="this.querySelector('.header-user-menu').classList.toggle('open')">
+        {{ username }} ▾
+        <div class="header-user-menu" id="user-menu">
+            <a class="header-user-menu-item" href="/help" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">ヘルプ</a>
+            <button class="header-user-menu-item" style="color:#1565c0;" onclick="event.stopPropagation();document.getElementById('group-code-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">グループコード</button>
+            <button class="header-user-menu-item" onclick="event.stopPropagation();document.getElementById('logout-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">ログアウト</button>
+        </div>
+    </span>
+</header>
+
+<main class="app-main">
+    <a href="#" class="back-btn" onclick="history.back(); return false;">← 戻る</a>
+
+    <div class="review-form-card">
+        <h1 class="review-form-title">{% if existing_comment %}口コミを編集{% else %}口コミを投稿{% endif %}</h1>
+        <p class="review-form-desc">お店の感想やおすすめポイントを共有しましょう。</p>
+        {% if existing_comment %}
+        <div class="edit-notice">この店舗には投稿済みの口コミがあります。更新できます。</div>
+        {% endif %}
+
+        <form method="post" action="/post_review" id="review-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label for="object_id" class="form-label">店舗を選択</label>
+            <select name="object_id" id="object_id" class="form-select" required>
+                <option value="" disabled {% if not selected_object_id %}selected{% endif %}>店舗を選んでください</option>
+                {% for obj in objects %}
+                <option value="{{ obj.object_id }}"
+                    {% if obj.object_id == selected_object_id %}selected{% endif %}>
+                    {{ obj.object_name }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <label for="comment" class="form-label">コメント</label>
+            <textarea name="comment" id="comment" class="form-textarea"
+                      placeholder="味、雰囲気、コスパなど自由にどうぞ"
+                      required maxlength="500">{{ existing_comment }}</textarea>
+            <div class="char-count"><span id="char-count">{{ existing_comment | length }}</span>/500</div>
+
+            <button type="submit" class="btn-primary" id="btn-submit"
+                    onclick="this.disabled=true;this.textContent='送信中...';this.form.submit();">{% if existing_comment %}更新する{% else %}投稿する{% endif %}</button>
+        </form>
+    </div>
+</main>
+
+<nav class="bottom-nav">
+    <a href="/rating" class="nav-item">
+        <span class="nav-icon">⭐</span>
+        <span class="nav-label">評価</span>
+    </a>
+    <a href="/recommendations" class="nav-item">
+        <span class="nav-icon">🍽️</span>
+        <span class="nav-label">おすすめ</span>
+    </a>
+    <a href="/map" class="nav-item">
+        <span class="nav-icon">🗺️</span>
+        <span class="nav-label">マップ</span>
+    </a>
+    <a href="/request_object" class="nav-item">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">リクエスト</span>
+    </a>
+</nav>
+
+<script>
+const textarea = document.getElementById('comment');
+const charCount = document.getElementById('char-count');
+textarea.addEventListener('input', () => {
+    charCount.textContent = textarea.value.length;
+});
+
+// 店舗変更時にリロードして既存口コミを取得
+document.getElementById('object_id').addEventListener('change', function() {
+    const oid = this.value;
+    if (oid) {
+        window.location.href = '/post_review?object_id=' + oid;
+    }
+});
+</script>
+
+
+<!-- グループコード入力モーダル -->
+<div class="logout-overlay" id="group-code-modal">
+    <div class="logout-card">
+        <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
+        <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
+        <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="group_code" placeholder="グループコード"
+                value="{{ current_group_code or '' }}"
+                style="display:block;width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:14px;box-sizing:border-box;">
+            <div class="logout-card-actions">
+                <button type="button" class="btn-logout-cancel" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
+                <button type="submit" class="btn-logout-confirm" style="background:#1565c0;">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ログアウト確認モーダル -->
+<div class="logout-overlay" id="logout-modal">
+    <div class="logout-card">
+        <div class="logout-card-title">ログアウト</div>
+        <div class="logout-card-msg">ログアウトしますか？</div>
+        <div class="logout-card-actions">
+            <button class="btn-logout-cancel" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
+            <form method="post" action="/logout" style="display:inline;margin:0;flex:1;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-logout-confirm" style="width:100%;">ログアウト</button></form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

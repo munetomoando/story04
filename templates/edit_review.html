@@ -3,8 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>おすすめ — ランチマップ</title>
+    <title>口コミ編集 — ランチマップ</title>
     <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <style>
+        .review-form-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .review-form-title {
+            font-size: 20px;
+            color: #1b5e20;
+            margin: 0 0 8px;
+        }
+        .review-store-name {
+            font-size: 15px;
+            color: #333;
+            font-weight: bold;
+            margin: 0 0 20px;
+            padding: 10px 14px;
+            background: #f0f7f0;
+            border-radius: 8px;
+        }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 6px;
+        }
+        .form-textarea {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #a5d6a7;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 16px;
+            outline: none;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+        .form-textarea:focus { border-color: #2e7d32; }
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: -12px;
+            margin-bottom: 16px;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 16px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #2e7d32;
+            background: white;
+            border: 2px solid #2e7d32;
+            border-radius: 10px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .back-btn:active { background: #e8f5e9; }
+    </style>
 </head>
 <body class="app-page">
 
@@ -21,59 +86,21 @@
 </header>
 
 <main class="app-main">
+    <a href="/store/{{ review.object_id }}" class="back-btn">← 戻る</a>
 
-    <!-- あなたへのおすすめ -->
-    <section class="rec-section">
-        <h2 class="section-title">あなたへのおすすめ</h2>
-        <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;font-size:13px;color:#2e7d32;margin-bottom:14px;">
-            あなたと好みが似ているユーザーの評価をもとにおすすめしています。
-        </div>
+    <div class="review-form-card">
+        <h1 class="review-form-title">口コミを編集</h1>
+        <div class="review-store-name">{{ review.object_name }}</div>
 
-        {% if recommendations %}
-        <div class="rec-card-list">
-            {% for rec in recommendations %}
-            <a href="/store/{{ rec.object_id }}" class="rec-card" style="text-decoration:none;">
-                <div class="rec-card-inner">
-                    <div class="rec-store-name">{{ rec.object_name }}</div>
-                    <div class="rec-stars">
-                        {% if rec.recommendation_score >= 0.75 %}★★★
-                        {% elif rec.recommendation_score >= 0.5 %}★★
-                        {% else %}★
-                        {% endif %}
-                    </div>
-                    <div class="rec-score">スコア: {{ rec.recommendation_score }}</div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state">
-            <p>まだおすすめがありません。</p>
-            <p>もっと評価を追加するとおすすめが表示されます。</p>
-            <a href="/rating" class="btn-primary">評価ページへ</a>
-        </div>
-        {% endif %}
-    </section>
+        <form method="post" action="/edit_review/{{ review.review_id }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label for="comment" class="form-label">コメント</label>
+            <textarea name="comment" id="comment" class="form-textarea"
+                      required maxlength="500">{{ review.comment }}</textarea>
+            <div class="char-count"><span id="char-count">{{ review.comment | length }}</span>/500</div>
 
-    <!-- みんなの人気店 -->
-    {% if popular_objects %}
-    <section class="popular-section">
-        <h2 class="section-title">📊 みんなの人気店 TOP{{ popular_objects | length }}</h2>
-        <ol class="popular-list">
-            {% for obj in popular_objects %}
-            <li class="popular-item">
-                <a href="/store/{{ obj.object_id }}" style="display:flex; align-items:center; gap:12px; flex:1; text-decoration:none; color:inherit;">
-                    <span class="popular-rank">{{ loop.index }}</span>
-                    <span class="popular-name">{{ obj.object_name }}</span>
-                    <span class="popular-score">平均 {{ obj.mean }} ({{ obj.count }}件)</span>
-                </a>
-            </li>
-            {% endfor %}
-        </ol>
-    </section>
-    {% endif %}
-
-
+            <button type="submit" class="btn-primary">更新する</button>
+        </form>
+    </div>
 </main>
 
 <nav class="bottom-nav">
@@ -81,7 +108,7 @@
         <span class="nav-icon">⭐</span>
         <span class="nav-label">評価</span>
     </a>
-    <a href="/recommendations" class="nav-item nav-active">
+    <a href="/recommendations" class="nav-item">
         <span class="nav-icon">🍽️</span>
         <span class="nav-label">おすすめ</span>
     </a>
@@ -95,6 +122,13 @@
     </a>
 </nav>
 
+<script>
+const textarea = document.getElementById('comment');
+const charCount = document.getElementById('char-count');
+textarea.addEventListener('input', () => {
+    charCount.textContent = textarea.value.length;
+});
+</script>
 
 
 <!-- グループコード入力モーダル -->

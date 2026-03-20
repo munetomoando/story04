@@ -4,27 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ユーザー登録</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=20260320">
 </head>
 <body>
     <div class="container">
         <h1>ユーザー登録</h1>
-        
+
         <div id="flash-messages" class="flash-messages" style="display: none;"></div>
-        
+
         <div class="form-wrapper">
-            <form action="/register" method="post" class="form-container">
+            <form action="/register" method="post" class="form-container" id="register-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <label for="username">ユーザー名:</label>
                 <p class="info-text">※ ユーザー名は、アルファベット（大文字・小文字）と数字のみ使用できます。</p>
-                <input type="text" id="username" name="username" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます" onblur="checkUsername()">
+                <p class="info-text" style="color:#c62828;">※ 本名が推察されるようなユーザー名は避けてください。</p>
+                <input type="text" id="username" name="username" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます" autocomplete="username" onblur="checkUsername()">
                 <p id="username-message" style="color: red; display: none;"></p>
 
                 <label for="password">パスワード (8文字以上、英数字と記号を1つ以上含めてください):</label>
-                <input type="password" id="password" name="password" pattern="^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$" required title="8文字以上の英数字+記号を含めてください">
+                <input type="password" id="password" name="password" pattern="^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$" required title="8文字以上の英数字+記号を含めてください" autocomplete="new-password">
 
-                <form action="/register" method="post">
-                    <button type="submit" class="big-button submit-btn">登録</button>
-                </form>
+                <label for="password_confirm">パスワード（確認）:</label>
+                <input type="password" id="password_confirm" required autocomplete="new-password" placeholder="もう一度入力してください">
+                <p id="password-match-message" style="display:none; font-size:13px; margin-top:4px;"></p>
+
+                {% if invite_required is defined and invite_required %}
+                <label for="invite_code">招待コード:</label>
+                <p class="info-text">※ 授業やイベントで配布された招待コードを入力してください。</p>
+                <input type="text" id="invite_code" name="invite_code" required placeholder="招待コードを入力">
+                {% endif %}
+
+                {% if error_message is defined and error_message %}
+                <p style="color:#c62828; font-weight:bold; font-size:14px;">{{ error_message }}</p>
+                {% endif %}
+
+                <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;margin:16px 0;font-size:12px;color:#5d4037;line-height:1.6;text-align:left;">
+                    登録することで以下に同意したものとみなします：<br>
+                    ・評価データはおすすめ機能の改善に利用されます<br>
+                    ・登録後7日以内にログインがない場合、アカウントは自動的に削除されます<br>
+                    ・最終ログインから2年以上経過したアカウントは、評価データを含め自動的に削除されます<br>
+                    ・削除されたデータの復元はできません
+                </div>
+
+                <button type="submit" class="big-button submit-btn" id="btn-register">登録</button>
             </form>
         </div>
 
@@ -32,15 +53,44 @@
     </div>
 
     <script>
-        // 3秒後にフラッシュメッセージを消す
-        setTimeout(() => {
-            let flashMessages = document.getElementById("flash-messages");
-            if (flashMessages) {
-                flashMessages.style.display = "none";
-            }
-        }, 3000);
+        const pw1 = document.getElementById('password');
+        const pw2 = document.getElementById('password_confirm');
+        const msg = document.getElementById('password-match-message');
+        const btn = document.getElementById('btn-register');
 
-        // ✅ ユーザー名の存在チェック（AJAX）
+        function checkPasswordMatch() {
+            if (pw2.value.length === 0) {
+                msg.style.display = 'none';
+                btn.disabled = false;
+                return;
+            }
+            if (pw1.value === pw2.value) {
+                msg.textContent = 'パスワードが一致しています';
+                msg.style.color = '#2e7d32';
+                msg.style.display = 'block';
+                btn.disabled = false;
+            } else {
+                msg.textContent = 'パスワードが一致していません';
+                msg.style.color = '#c62828';
+                msg.style.display = 'block';
+                btn.disabled = true;
+            }
+        }
+
+        pw1.addEventListener('input', checkPasswordMatch);
+        pw2.addEventListener('input', checkPasswordMatch);
+
+        document.getElementById('register-form').addEventListener('submit', function(e) {
+            if (pw1.value !== pw2.value) {
+                e.preventDefault();
+                msg.textContent = 'パスワードが一致していません';
+                msg.style.color = '#c62828';
+                msg.style.display = 'block';
+                pw2.focus();
+            }
+        });
+
+        // ユーザー名の存在チェック（AJAX）
         function checkUsername() {
             let username = document.getElementById("username").value;
             let message = document.getElementById("username-message");

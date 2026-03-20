@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>レビュー管理画面</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=20260320">
   <style>
     /* テーブル全体のスタイル */
     table {
@@ -106,7 +106,17 @@
 </style>
 </head>
 <body>
-  <h1>ユーザー × 評価対象 評価一覧</h1>
+  <h1>レビュー管理</h1>
+  <div style="margin-bottom:20px;font-size:13px;">
+    <a href="/admin/dashboard" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ダッシュボード</a>
+    <a href="/admin/objects" style="color:#2e7d32;text-decoration:none;margin-right:16px;">店舗管理</a>
+    <a href="/admin/comments" style="color:#2e7d32;text-decoration:none;margin-right:16px;">口コミ管理</a>
+    <a href="/admin/users" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ユーザー管理</a>
+    <a href="/admin/heatmap" style="color:#2e7d32;text-decoration:none;">ユーザー分析</a>
+    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+  </div>
+
+  <h2>ユーザー × 評価対象 評価一覧</h2>
 
     <h2>推薦スコア</h2>
     <div class="recommendation-box">
@@ -137,23 +147,24 @@
           </tr>
       </table>
     </div>
-    <table>
+  <div class="admin-table-wrap">
+    <table class="admin-matrix-table">
         <thead>
             <tr>
-                <th>ユーザー</th>
+                <th class="sticky-col sticky-header">ユーザー</th>
                 {% for obj_name in column_names %}
-                    <th>{{ obj_name }}</th>  {# object_name を表示 #}
+                    <th class="sticky-header" title="{{ obj_name }}">{{ obj_name }}</th>
                 {% endfor %}
             </tr>
         </thead>
         <tbody>
             {% for row in pivot_table %}
             <tr>
-                <td>{{ row.username }}</td>
+                <td class="sticky-col">{{ row.username }}</td>
                 {% for obj_name in column_names %}
                 {% set cell_content = row.get(obj_name, '-') %}
                 {% set score = '-' %}
-                
+
                 {% if cell_content is not none and 'RS:' in cell_content %}
                     {% set parts = cell_content.split('\n') %}
                     {% if parts | length > 2 %}
@@ -161,7 +172,7 @@
                     {% endif %}
                 {% endif %}
 
-                {% set score_class = '' %}
+                {% set score_class = 'no-data' %}
                 {% if score != '-' %}
                     {% set score_float = score | float %}
                     {% if score_float >= 0.75 %}
@@ -175,88 +186,23 @@
                     {% endif %}
                 {% endif %}
 
-                <td class="{{ score_class }}">{{ cell_content | safe }}</td>
+                {% if cell_content != '-' and cell_content is not none %}
+                <td class="score-cell {{ score_class }}"><div class="cell-inner">{{ cell_content | replace('\n', '<br>') | safe }}</div></td>
+                {% else %}
+                <td class="score-cell no-data"></td>
+                {% endif %}
                 {% endfor %}
             </tr>
             {% endfor %}
         </tbody>
     </table>
+  </div>
 
     <h2>推薦スコアの分布とカーネル密度推定</h2>
     <img src="data:image/png;base64,{{ recommendation_hist_base64 | safe }}" alt="推薦スコアのヒストグラム">
 
-    <h2>ユーザー類似度のヒートマップ</h2>
-    <img src="data:image/png;base64,{{ heatmap_base64 | safe }}" alt="ユーザー類似度ヒートマップ">
-
-    <h2>ユーザー類似度の分布とカーネル密度推定</h2>
-    <img src="data:image/png;base64,{{ similarity_hist_base64 | safe }}" alt="ユーザー類似度のヒストグラム">
-
-    <h2>ユーザークラスタリング</h2>
-    <!-- クラスタ表を横並びに配置 -->
-<div class="cluster-table-container">
-    <div class="cluster-table">
-        <h3>ユーザー名順 (ABC順)</h3>
-        <table class="cluster-table">
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>Cluster</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in cluster_sorted_by_username %}
-                <tr>
-                    <td>{{ user.username }}</td>
-                    <td>{{ user.cluster }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- クラスタ順のクラスタ表 -->
-    <div class="cluster-table">
-        <h3>クラスタ順</h3>
-        <table class="cluster-table">
-            <thead>
-                <tr>
-                    <th>Cluster</th>
-                    <th>Username</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in cluster_sorted_by_cluster %}
-                <tr>
-                    <td>{{ user.cluster }}</td>
-                    <td>{{ user.username }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-<style>
-    .cluster-container {
-        display: flex;         /* 横並びにする */
-        justify-content: space-between; /* 均等に配置 */
-        gap: 20px;             /* 余白を設ける */
-    }
-    
-    .cluster-table {
-        flex: 1;               /* 各表を均等な幅に */
-        min-width: 300px;       /* 最小幅を指定 */
-    }
-
-    /* 📱 スマホ対応 (768px以下では縦並び) */
-    @media (max-width: 768px) {
-        .cluster-container {
-            flex-direction: column; /* 縦並びに切り替え */
-        }
-    }
-</style>   
-
-    <h2>ユーザークラスタリングの可視化</h2>
-    <img src="data:image/png;base64,{{ cluster_plot_base64 | safe }}" alt="ユーザークラスタリングの可視化">
+    <h2>口コミ管理</h2>
+    <p><a href="/admin/comments" style="color:#2e7d32;font-weight:bold;">口コミ管理ページへ →</a></p>
 
 </body>
 </html>

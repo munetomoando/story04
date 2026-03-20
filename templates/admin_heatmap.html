@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ユーザー類似度ヒートマップ</title>
+  <link rel="stylesheet" href="/static/style.css?v=20260320">
+  <style>
+    body { padding: 20px; background: #f4f6f8; font-family: Arial, sans-serif; }
+    img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    .cluster-wrap { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 8px; }
+    .cluster-box { background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); overflow: hidden; }
+    .cluster-box h3 { margin: 0; padding: 10px 16px; background: #e8f5e9; color: #1b5e20; font-size: 14px; }
+    .cluster-box table { border-collapse: collapse; min-width: 200px; }
+    .cluster-box th { background: #f4f4f4; font-size: 13px; padding: 8px 16px; text-align: center; border-bottom: 2px solid #ddd; }
+    .cluster-box td { font-size: 13px; padding: 7px 16px; text-align: center; border-bottom: 1px solid #eee; }
+    .cluster-box tr:last-child td { border-bottom: none; }
+    .cluster-box tr:hover td { background: #f9fbe7; }
+  </style>
+</head>
+<body>
+  <div style="max-width:1000px;margin:0 auto 16px;font-size:13px;">
+    <a href="/admin/dashboard" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ダッシュボード</a>
+    <a href="/admin/reviews" style="color:#2e7d32;text-decoration:none;margin-right:16px;">レビュー管理</a>
+    <a href="/admin/objects" style="color:#2e7d32;text-decoration:none;margin-right:16px;">店舗管理</a>
+    <a href="/admin/comments" style="color:#2e7d32;text-decoration:none;margin-right:16px;">口コミ管理</a>
+    <a href="/admin/users" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ユーザー管理</a>
+    <a href="/admin/groups" style="color:#2e7d32;text-decoration:none;">グループ管理</a>
+    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+  </div>
+  <h1>ユーザー類似度ヒートマップ</h1>
+
+  <form method="get" action="/admin/heatmap" style="margin:12px 0 20px; padding:12px 16px; background:white; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+    <label style="font-size:14px;font-weight:bold;color:#1b5e20;margin-right:8px;">グループで絞り込み:</label>
+    <select name="group_code" onchange="this.form.submit()" style="padding:6px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;">
+      <option value="">全ユーザー</option>
+      {% for gc in group_codes %}
+      <option value="{{ gc.code }}" {% if gc.code == selected_group_code %}selected{% endif %}>{{ gc.label }}（{{ gc.code }}）</option>
+      {% endfor %}
+    </select>
+  </form>
+
+  {% if no_data %}
+  <p style="color:#888;font-size:14px;padding:20px 0;">このグループにはデータが不足しています（ユーザーが2人以上必要です）。</p>
+  {% else %}
+  {% if heatmap_base64 %}
+  <img src="data:image/png;base64,{{ heatmap_base64 | safe }}" alt="ユーザー類似度ヒートマップ" style="max-width:100%;height:auto;">
+  {% endif %}
+
+  {% if similarity_hist_base64 %}
+  <h2>ユーザー類似度の分布とカーネル密度推定</h2>
+  <img src="data:image/png;base64,{{ similarity_hist_base64 | safe }}" alt="ユーザー類似度のヒストグラム" style="max-width:100%;height:auto;">
+  {% endif %}
+  {% endif %}
+
+  <h2>ユーザークラスタリング</h2>
+  <div class="cluster-wrap">
+    <div class="cluster-box">
+      <h3>ユーザー名順</h3>
+      <table>
+        <thead><tr><th>Username</th><th>Cluster</th></tr></thead>
+        <tbody>
+          {% for user in cluster_sorted_by_username %}
+          <tr><td>{{ user.username }}</td><td>{{ user.cluster }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="cluster-box">
+      <h3>クラスタ順</h3>
+      <table>
+        <thead><tr><th>Cluster</th><th>Username</th></tr></thead>
+        <tbody>
+          {% for user in cluster_sorted_by_cluster %}
+          <tr><td>{{ user.cluster }}</td><td>{{ user.username }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>ユーザークラスタリングの可視化</h2>
+  {% if cluster_plot_base64 %}
+  <img src="data:image/png;base64,{{ cluster_plot_base64 | safe }}" alt="ユーザークラスタリングの可視化">
+  {% else %}
+  <p style="color:#888;">クラスタリングにはユーザーが2人以上必要です。</p>
+  {% endif %}
+</body>
+</html>

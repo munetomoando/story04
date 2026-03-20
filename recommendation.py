@@ -1,218 +1,241 @@
+"""
+協調フィルタリング推薦エンジン（NumPy行列演算版）
+"""
 import pandas as pd
 import numpy as np
 import os
+import sqlite3
+import logging
 from sklearn.metrics.pairwise import cosine_similarity
-
+from pathlib import Path
 
 __all__ = [
-    "recommend_for_all_users", 
-    "categorize_recommendation", 
-    "get_username", 
-    "get_recommendations_for_user", 
+    "recommend_for_all_users",
+    "recommend_for_single_user",
+    "categorize_recommendation",
+    "get_username",
+    "get_recommendations_for_user",
+    "update_user_similarity_from_db",
     "user_object_matrix",
-    "user_zscore_matrix",  # ✅ 追加
-    "user_info", 
-    "user_similarity"
+    "user_zscore_matrix",
+    "user_info",
+    "user_similarity",
 ]
 
-RATINGS_FILE = "/opt/render/project/src/ratings.csv"
-USERS_FILE = "/opt/render/project/src/users.csv"
-OBJECTS_FILE = "/opt/render/project/src/objects.csv"
+# ---- DB パス ----
+DATA_DIR = Path(os.getenv("DATA_DIR", "/data")).resolve()
+DB_PATH = DATA_DIR / "lunchmap.db"
 
-# グローバル変数（既存コードで使われているもの）
+import threading
+
+# グローバル変数
 user_object_matrix = pd.DataFrame()
 user_zscore_matrix = pd.DataFrame()
 user_similarity = pd.DataFrame()
+user_info = {}
+object_info = {}
+_sim_lock = threading.Lock()  # 類似度行列の競合防止
+
+
+def _get_conn():
+    return sqlite3.connect(str(DB_PATH), timeout=30)
+
 
 def update_user_and_object_info():
-    user_df = pd.read_csv(USERS_FILE, encoding="utf-8-sig", dtype={"user_id": str})
-    global user_info
-    user_info = dict(zip(user_df["user_id"], user_df["username"]))
+    global user_info, object_info
+    try:
+        conn = _get_conn()
+        user_df = pd.read_sql_query(
+            "SELECT CAST(user_id AS TEXT) as user_id, username FROM users", conn
+        )
+        objects_df = pd.read_sql_query(
+            "SELECT CAST(object_id AS TEXT) as object_id, object_name FROM objects", conn
+        )
+        conn.close()
+    except Exception as e:
+        logging.warning(f"update_user_and_object_info error: {e}")
+        return
 
-    objects_df = pd.read_csv(OBJECTS_FILE, encoding="utf-8-sig", dtype={"object_id": str})
-    global object_info
-    object_info = dict(zip(objects_df["object_id"], objects_df["object_name"]))
+    user_info = dict(zip(user_df["user_id"].str.strip(), user_df["username"].fillna("").astype(str)))
+    object_info = dict(zip(objects_df["object_id"].str.strip(), objects_df["object_name"].fillna("").astype(str)))
+
 
 def compute_standardized_rating(series):
-    """各ユーザーの rating を平均と標準偏差で標準化する。標準偏差が小さい場合は 0.1 を下限とする"""
+    """各ユーザーの rating を Z-score 標準化"""
     mean = series.mean()
-    std = series.std(ddof=1)  # 標本標準偏差を計算
-    if pd.isna(std) or std < 0.1:  # NaN または標準偏差が小さすぎる場合
-        return series * 0  # 標準偏差が 0 ならすべて 0 にする
+    std = series.std(ddof=1)
+    if pd.isna(std) or std < 0.1:
+        return series * 0
     return (series - mean) / std
 
 
-def update_user_similarity_from_csv():
+def update_user_similarity_from_db():
+    """DB から評価データを読み込み、類似度行列を更新"""
     global user_object_matrix, user_zscore_matrix, user_similarity
 
-    # --- (1) ratings.csv の存在チェック & 読み込み ---
-    if not os.path.exists(RATINGS_FILE):
-        print("❌ RATINGS_FILEが見つかりません。空のDataFrameを返します。")
-        # 空で初期化
-        user_object_matrix = pd.DataFrame()
-        user_zscore_matrix = pd.DataFrame()
-        user_similarity = pd.DataFrame()
-        return  # ここで終了
-
-    # CSV読み込み
-    df = pd.read_csv(RATINGS_FILE, encoding="utf-8-sig", dtype={"user_id": str, "object_id": str})
-    # 数値化
-    if "rating" in df.columns:
-        df["rating"] = pd.to_numeric(df["rating"], errors="coerce").fillna(0)
-    else:
-        df["rating"] = 0
-
-    # --- (2) Zスコアの計算 ---
-    if not df.empty and "rating" in df.columns:
-        # グループごとに transform() を用いて標準化
-        df["z_score"] = df.groupby("user_id")["rating"].transform(compute_standardized_rating).fillna(0)
-        
-        # ✅ デバッグ用にZスコアを表示
-        print("🔍 Zスコアの計算結果 (先頭10行):")
-        print(df[["user_id", "object_id", "rating", "z_score"]].head(10))
-    else:
-        # もし空の場合はZスコア計算できないので、そのまま
-        df["z_score"] = 0
-
-    # --- (3) ピボットテーブル作成 ---
-    if not df.empty:
-        # 同一 user_id, object_id が複数ある場合は平均値を採用
-        user_object_matrix_local = df.pivot_table(
-            index="user_id", columns="object_id", values="rating", aggfunc="mean"
+    try:
+        conn = _get_conn()
+        df = pd.read_sql_query(
+            "SELECT CAST(r.user_id AS TEXT) as user_id, CAST(r.object_id AS TEXT) as object_id, r.rating "
+            "FROM ratings r JOIN users u ON r.user_id = u.user_id "
+            "WHERE u.status IS NULL OR u.status IN ('active', 'warned')",
+            conn,
         )
-        user_zscore_matrix_local = df.pivot_table(
-            index="user_id", columns="object_id", values="z_score", aggfunc="mean"
-        ).fillna(0)  # Zスコアは欠損を0とみなす
+        conn.close()
+    except Exception as e:
+        logging.warning(f"update_user_similarity_from_db error: {e}")
+        with _sim_lock:
+            user_object_matrix = pd.DataFrame()
+            user_zscore_matrix = pd.DataFrame()
+            user_similarity = pd.DataFrame()
+        return
 
-        # user_id / object_id を文字列に統一
-        user_object_matrix_local.index = user_object_matrix_local.index.astype(str)
-        user_object_matrix_local.columns = user_object_matrix_local.columns.astype(str)
-        user_zscore_matrix_local.index = user_zscore_matrix_local.index.astype(str)
-        user_zscore_matrix_local.columns = user_zscore_matrix_local.columns.astype(str)
+    if df.empty:
+        with _sim_lock:
+            user_object_matrix = pd.DataFrame()
+            user_zscore_matrix = pd.DataFrame()
+            user_similarity = pd.DataFrame()
+        return
 
-        # グローバル変数に代入（元コード維持）
-        user_object_matrix = user_object_matrix_local
-        user_zscore_matrix = user_zscore_matrix_local
+    df["rating"] = pd.to_numeric(df["rating"], errors="coerce").fillna(0)
+    df["z_score"] = df.groupby("user_id")["rating"].transform(compute_standardized_rating).fillna(0)
 
-        # --- (4) コサイン類似度を計算 ---
-        similarity_array = cosine_similarity(user_zscore_matrix)
-        new_user_similarity = pd.DataFrame(
-            similarity_array,
-            index=user_zscore_matrix.index,
-            columns=user_zscore_matrix.index
-        )
-        user_similarity = new_user_similarity
+    _uom = df.pivot_table(index="user_id", columns="object_id", values="rating", aggfunc="mean")
+    _uzm = df.pivot_table(index="user_id", columns="object_id", values="z_score", aggfunc="mean").fillna(0)
 
-        print("📊 user_zscore_matrix（標準化評価行列）")
-        print(user_zscore_matrix.tail())  # 下数行をデバッグ表示
+    # 文字列に統一
+    _uom.index = _uom.index.astype(str)
+    _uom.columns = _uom.columns.astype(str)
+    _uzm.index = _uzm.index.astype(str)
+    _uzm.columns = _uzm.columns.astype(str)
 
-    else:
-        # df が空の場合は空DataFrameで初期化
-        user_object_matrix = pd.DataFrame()
-        user_zscore_matrix = pd.DataFrame()
-        user_similarity = pd.DataFrame()
+    # コサイン類似度（行列演算）
+    sim_array = cosine_similarity(_uzm)
+    _us = pd.DataFrame(sim_array, index=_uzm.index, columns=_uzm.index)
 
-    # 最後に簡単なデバッグ表示（ユーザーインデックスを確認）
-    print("📊 user_object_matrix のインデックス:", user_object_matrix.index)
-    print("📊 user_similarity のインデックス:", user_similarity.index)
-
-
+    # ロックで一括代入（読み取り側が中途半端な状態を見ない）
+    with _sim_lock:
+        user_object_matrix = _uom
+        user_zscore_matrix = _uzm
+        user_similarity = _us
 
 
 def recommend_for_all_users(threshold=0.3):
+    """全ユーザーの推薦スコアを行列演算で一括計算"""
     global user_object_matrix, user_zscore_matrix, user_similarity
 
-    update_user_similarity_from_csv()
+    update_user_similarity_from_db()
 
-    # 万が一、まだ行列が用意されていない or 空の場合は、ここで更新しておく手もある
-    if user_zscore_matrix.empty or user_similarity.empty:
-        print("⚠ user_zscore_matrix / user_similarity が空です。再計算します。")
-        update_user_similarity_from_csv()
-
-    # user_object_matrix が空の場合も、計算が不可能なので空のDataFrameを返す
-    if user_object_matrix.empty:
-        print("⚠ user_object_matrix が空です。推薦スコアを計算できません。")
+    if user_zscore_matrix.empty or user_similarity.empty or user_object_matrix.empty:
         return pd.DataFrame(columns=["user_id", "object_id", "recommendation_score"]), user_similarity
 
-    print("📊 user_similarity（ユーザー類似度行列）")
-    print(user_similarity.index)
-    print("📊 user_object_matrix のインデックス（ユーザーID）")
-    print(user_object_matrix.index)
+    # 類似度行列から閾値未満をゼロにし、自己類似度もゼロにする
+    sim = user_similarity.values.copy()
+    np.fill_diagonal(sim, 0)
+    sim[sim < threshold] = 0
 
-    recommendations = []
-    
-    # 各ユーザーについて推薦スコアを計算
-    for target_user in user_object_matrix.index:
-        user_data = user_object_matrix.loc[target_user]
-        # 未評価(= NaN)のオブジェクト一覧
-        unrated_objects = user_data[user_data.isna()].index
-        
-        print(f"🔍 ユーザー {target_user} の未評価オブジェクト数: {len(unrated_objects)}")
+    # Zスコア行列 (users × objects)
+    z = user_zscore_matrix.values  # NaN なし (fillna(0) 済み)
 
-        # 閾値以上のユーザーを取得（自己は除く）
-        similar_users = user_similarity.loc[target_user].drop(target_user, errors="ignore")
-        similar_users = similar_users[similar_users >= threshold]
+    # 評価済みマスク (True = 評価済み)
+    rated_mask = ~user_object_matrix.reindex(
+        index=user_zscore_matrix.index, columns=user_zscore_matrix.columns
+    ).isna().values
 
-        print(f"🔍 ユーザー {target_user} の類似ユーザー数: {len(similar_users)}")
-        
-        for object_id in unrated_objects:
-            scores = []
-            weights = []
-            for sim_user, sim_score in similar_users.items():
-                # sim_userがobject_idを評価しているか(= user_object_matrixでNaNでない)チェック
-                if (object_id in user_object_matrix.columns
-                    and not pd.isna(user_object_matrix.loc[sim_user, object_id])):
-                    # zスコアを類似度で加重平均
-                    standardized_rating = user_zscore_matrix.loc[sim_user, object_id]
-                    scores.append(standardized_rating * sim_score)
-                    weights.append(sim_score)
+    # 未評価マスク (True = 未評価 → 推薦対象)
+    unrated_mask = ~rated_mask
 
-            if weights:
-                rec_score = np.sum(scores) / np.sum(weights)
-            else:
-                rec_score = 0  # 類似ユーザーがいない場合は0
+    # 加重和: sim (U×U) @ (z * rated_mask) → (U×O)
+    # 各ユーザーに対し、類似ユーザーの「評価済み店舗のZスコア × 類似度」の和
+    weighted_sum = sim @ (z * rated_mask)
 
-            # デバッグ用
-            print(f"ユーザー {target_user}, オブジェクト {object_id}")
-            print(f"  scores: {scores}")
-            print(f"  weights: {weights}")
-            print(f"  計算結果: {rec_score}")
+    # 重み和: sim (U×U) @ rated_mask → (U×O)
+    weight_sum = sim @ rated_mask.astype(float)
 
-            recommendations.append((target_user, object_id, round(rec_score, 2)))
+    # 推薦スコア = 加重和 / 重み和
+    with np.errstate(divide='ignore', invalid='ignore'):
+        scores = np.where(weight_sum > 0, weighted_sum / weight_sum, 0)
 
-    # user_similarity が array の場合はDataFrameに戻す (念のため)
-    if isinstance(user_similarity, np.ndarray):
-        user_similarity = pd.DataFrame(
-            user_similarity,
-            index=user_zscore_matrix.index,
-            columns=user_zscore_matrix.index
-        )
+    # 未評価のもののみ結果として抽出
+    user_ids = user_zscore_matrix.index.values
+    object_ids = user_zscore_matrix.columns.values
 
-    # 推薦結果をDataFrameにまとめ
-    return pd.DataFrame(recommendations, columns=["user_id", "object_id", "recommendation_score"]), user_similarity
+    rows = []
+    for i, uid in enumerate(user_ids):
+        for j, oid in enumerate(object_ids):
+            if unrated_mask[i, j]:
+                rows.append((uid, oid, round(float(scores[i, j]), 2)))
+
+    result_df = pd.DataFrame(rows, columns=["user_id", "object_id", "recommendation_score"])
+    return result_df, user_similarity
 
 
-def categorize_recommendation(score):
-    """スコアに基づいて星マークを付与"""
-    if pd.isna(score) or score < 0.25:  # ⭐ 0.25未満を除外
-        return None
-    elif score >= 0.75:
+def recommend_for_single_user(target_user_id, threshold=0.3):
+    """特定ユーザーのみの推薦スコアを行列演算で計算（即時応答用）"""
+    global user_object_matrix, user_zscore_matrix, user_similarity
+
+    target_user_id = str(target_user_id)
+
+    if user_zscore_matrix.empty or user_similarity.empty or user_object_matrix.empty:
+        return pd.DataFrame(columns=["user_id", "object_id", "recommendation_score"])
+
+    if target_user_id not in user_similarity.index:
+        return pd.DataFrame(columns=["user_id", "object_id", "recommendation_score"])
+
+    # 類似度ベクトル (1×U)
+    sim_vec = user_similarity.loc[target_user_id].values.copy()
+    sim_vec[user_similarity.index.get_loc(target_user_id)] = 0  # 自己を除外
+    sim_vec[sim_vec < threshold] = 0
+
+    # Zスコア行列 (U×O)
+    z = user_zscore_matrix.values
+
+    # 評価済みマスク
+    rated_mask = ~user_object_matrix.reindex(
+        index=user_zscore_matrix.index, columns=user_zscore_matrix.columns
+    ).isna().values
+
+    # ターゲットユーザーの未評価マスク
+    target_idx = user_zscore_matrix.index.get_loc(target_user_id)
+    target_unrated = ~rated_mask[target_idx]
+
+    # 加重和: sim_vec (1×U) @ (z * rated_mask) → (1×O)
+    weighted_sum = sim_vec @ (z * rated_mask)
+    weight_sum = sim_vec @ rated_mask.astype(float)
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        scores = np.where(weight_sum > 0, weighted_sum / weight_sum, 0)
+
+    object_ids = user_zscore_matrix.columns.values
+    rows = [
+        (target_user_id, oid, round(float(scores[j]), 2))
+        for j, oid in enumerate(object_ids)
+        if target_unrated[j]
+    ]
+
+    return pd.DataFrame(rows, columns=["user_id", "object_id", "recommendation_score"])
+
+
+def categorize_recommendation(score, default=None):
+    """スコアに基づいて星マークを付与。default は閾値未満時の戻り値"""
+    try:
+        score_val = float(score)
+    except (ValueError, TypeError):
+        return default
+    if pd.isna(score_val) or score_val < 0.25:
+        return default
+    elif score_val >= 0.75:
         return "★★★"
-    elif score >= 0.5:
+    elif score_val >= 0.5:
         return "★★"
-    elif score >= 0.25:
+    elif score_val >= 0.25:
         return "★"
+    return default
+
 
 def get_username(user_id):
-    """user_id から username を取得する"""
     return user_info.get(user_id, "Unknown")
 
-user_df = pd.read_csv(USERS_FILE, encoding="utf-8-sig", dtype={"user_id": str})
-user_info = dict(zip(user_df["user_id"], user_df["username"]))
-
-# オブジェクト情報の読み込み
-objects_df = pd.read_csv(OBJECTS_FILE, encoding="utf-8-sig", dtype={"object_id": str})
-object_info = dict(zip(objects_df["object_id"], objects_df["object_name"]))
 
 def get_recommendations_for_user(username: str):
     update_user_and_object_info()
@@ -223,24 +246,16 @@ def get_recommendations_for_user(username: str):
             user_id = uid
             break
     if user_id is None:
-        print(f"⚠ ユーザー名 {username} が user_info に見つかりません。")
         return {}
 
-    # 推薦スコアを取得
-    recommendations_df, _ = recommend_for_all_users()
-    if recommendations_df.empty:
-        print("⚠ recommendations_df が空です。")
+    rec_df = recommend_for_single_user(user_id)
+    if rec_df.empty:
         return {}
-    
-    user_recommendations = recommendations_df[recommendations_df["user_id"] == user_id].copy()
-    user_recommendations.sort_values("recommendation_score", ascending=False, inplace=True)
 
-    # オブジェクト名とスコアの辞書を作成（object_id を str に変換）
-    recommendations = {
-        object_info.get(str(row["object_id"]), "Unknown"):
-            categorize_recommendation(row["recommendation_score"])
-        for _, row in user_recommendations.iterrows()
-        if row["recommendation_score"] >= 0.25  # ⭐ 0.25以上のスコアのみ表示
+    rec_df = rec_df.sort_values("recommendation_score", ascending=False)
+
+    return {
+        (object_info.get(str(row["object_id"]).strip()) or "（名称未登録）"): categorize_recommendation(row["recommendation_score"])
+        for _, row in rec_df.iterrows()
+        if row["recommendation_score"] >= 0.25
     }
-
-    return recommendations

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>マップ — ランチマップ</title>
+    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="">
+    <style>
+        #map {
+            position: fixed;
+            top: 52px;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            z-index: 1;
+        }
+        .map-empty-msg {
+            position: fixed;
+            top: 52px;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* ジャンルフィルター */
+        .genre-btn {
+            flex-shrink: 0;
+            padding: 5px 12px;
+            border-radius: 16px;
+            border: 1px solid #ccc;
+            background: white;
+            color: #666;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .genre-btn.active {
+            background: #2e7d32;
+            color: white;
+            border-color: #2e7d32;
+        }
+        #genre-filter::-webkit-scrollbar { display: none; }
+
+        .bubble-marker { position: relative; }
+
+        .bubble-label {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            white-space: nowrap;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #1b5e20;
+            line-height: 1.3;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .bubble-label:hover {
+            transform: scale(1.08);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+            z-index: 9999 !important;
+        }
+
+        /* 上方向 */
+        .bw-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .bw-top .bubble-stem {
+            width: 2px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .bw-top .bubble-tip {
+            width: 0; height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 6px solid white;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+        }
+
+        /* 左方向（ラベルが左、しっぽが右へ伸びてピンを指す） */
+        .bw-left {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+        .bw-left .bubble-stem {
+            height: 2px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .bw-left .bubble-tip {
+            width: 0; height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 6px solid white;
+            filter: drop-shadow(1px 0 1px rgba(0,0,0,0.1));
+        }
+
+        /* 右方向（ラベルが右、しっぽが左へ伸びてピンを指す） */
+        .bw-right {
+            display: flex;
+            flex-direction: row-reverse;
+            align-items: center;
+        }
+        .bw-right .bubble-stem {
+            height: 2px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .bw-right .bubble-tip {
+            width: 0; height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-right: 6px solid white;
+            filter: drop-shadow(-1px 0 1px rgba(0,0,0,0.1));
+        }
+    </style>
+</head>
+<body class="app-page">
+
+<header class="app-header">
+    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">神田三崎町ランチマップ</a>
+    <span class="header-user" onclick="this.querySelector('.header-user-menu').classList.toggle('open')">
+        {{ username }} ▾
+        <div class="header-user-menu" id="user-menu">
+            <a class="header-user-menu-item" href="/help" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">ヘルプ</a>
+            <button class="header-user-menu-item" style="color:#1565c0;" onclick="event.stopPropagation();document.getElementById('group-code-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">グループコード</button>
+            <button class="header-user-menu-item" onclick="event.stopPropagation();document.getElementById('logout-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">ログアウト</button>
+        </div>
+    </span>
+</header>
+
+<div id="genre-filter" style="position:fixed;top:52px;left:0;right:0;z-index:10;background:white;
+    border-bottom:1px solid #e0e0e0;padding:6px 10px;display:flex;gap:6px;overflow-x:auto;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;">
+    <button class="genre-btn active" data-genre="all" onclick="filterGenre('all',this)">すべて</button>
+</div>
+<div id="map" style="top:88px !important;"></div>
+<div id="empty-msg" class="map-empty-msg" style="display:none;">
+    まだ店舗の位置情報が登録されていません。
+</div>
+
+<nav class="bottom-nav">
+    <a href="/rating" class="nav-item">
+        <span class="nav-icon">⭐</span>
+        <span class="nav-label">評価</span>
+    </a>
+    <a href="/recommendations" class="nav-item">
+        <span class="nav-icon">🍽️</span>
+        <span class="nav-label">おすすめ</span>
+    </a>
+    <a href="/map" class="nav-item nav-active">
+        <span class="nav-icon">🗺️</span>
+        <span class="nav-label">マップ</span>
+    </a>
+    <a href="/request_object" class="nav-item">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">リクエスト</span>
+    </a>
+</nav>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+<script>
+const STEM_DEFAULT = 4;
+const STEM_MAX = 36;
+const LABEL_H = 28;
+const LABEL_W_BASE = 80;  // ラベル幅の概算ベース(px)
+const OVERLAP_PAD = 6;     // 重なり判定の余白(px)
+
+const mapObj = L.map('map').setView([35.6965, 139.7580], 17);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+}).addTo(mapObj);
+
+let allEntries = [];
+
+/**
+ * ラベル幅を文字数から概算
+ */
+function estLabelW(name) {
+    return Math.max(LABEL_W_BASE, name.length * 13 + 20);
+}
+
+/**
+ * 方向 dir + しっぽ長 stemLen から、ピン位置(0,0)基準のラベル矩形(px)を返す
+ * { xMin, xMax, yMin, yMax }  (yは下が正)
+ */
+function labelRect(name, dir, stemLen) {
+    const w = estLabelW(name);
+    const h = LABEL_H;
+    const tipLen = 6;
+    if (dir === 'top') {
+        // ラベルはピンの上
+        const totalUp = h + stemLen + tipLen;
+        return { xMin: -w / 2, xMax: w / 2, yMin: -totalUp, yMax: -totalUp + h };
+    } else if (dir === 'left') {
+        // ラベルはピンの左
+        const totalLeft = w + stemLen + tipLen;
+        return { xMin: -totalLeft, xMax: -totalLeft + w, yMin: -h / 2, yMax: h / 2 };
+    } else { // right
+        // ラベルはピンの右
+        const offset = stemLen + tipLen;
+        return { xMin: offset, xMax: offset + w, yMin: -h / 2, yMax: h / 2 };
+    }
+}
+
+/**
+ * 2つの矩形が重なるか判定 (PAD分の余白込み)
+ */
+function rectsOverlap(a, b) {
+    return !(a.xMax + OVERLAP_PAD <= b.xMin || b.xMax + OVERLAP_PAD <= a.xMin ||
+             a.yMax + OVERLAP_PAD <= b.yMin || b.yMax + OVERLAP_PAD <= a.yMin);
+}
+
+/**
+ * 方向+しっぽ長さからDivIconを生成
+ */
+function createIcon(name, dir, stemLen) {
+    const tipLen = 6;
+    const w = estLabelW(name);
+
+    if (dir === 'top') {
+        // 全体: ラベル(w x LABEL_H) + stem + tip が縦に並ぶ
+        // ピン位置 = 左上から (w/2, totalH) — ラベル中央下のtip先端
+        const totalH = LABEL_H + stemLen + tipLen;
+        const html = `<div class="bw-top">
+            <div class="bubble-label">${name}</div>
+            <div class="bubble-stem" style="height:${stemLen}px;"></div>
+            <div class="bubble-tip"></div>
+        </div>`;
+        return L.divIcon({
+            className: 'bubble-marker',
+            html, iconSize: [w, totalH],
+            iconAnchor: [w / 2, totalH],
+        });
+    } else if (dir === 'left') {
+        // 全体: ラベル + stem + tip が横に並ぶ (左→右)
+        // ピン位置 = 左上から (totalW, LABEL_H/2) — 右端のtip先端
+        const totalW = w + stemLen + tipLen;
+        const html = `<div class="bw-left">
+            <div class="bubble-label">${name}</div>
+            <div class="bubble-stem" style="width:${stemLen}px;"></div>
+            <div class="bubble-tip"></div>
+        </div>`;
+        return L.divIcon({
+            className: 'bubble-marker',
+            html, iconSize: [totalW, LABEL_H],
+            iconAnchor: [totalW, LABEL_H / 2],
+        });
+    } else { // right
+        // 全体: tip + stem + ラベル が横に並ぶ (左→右, flex row-reverse)
+        // ピン位置 = 左上から (0, LABEL_H/2) — 左端のtip先端
+        const totalW = w + stemLen + tipLen;
+        const html = `<div class="bw-right">
+            <div class="bubble-label">${name}</div>
+            <div class="bubble-stem" style="width:${stemLen}px;"></div>
+            <div class="bubble-tip"></div>
+        </div>`;
+        return L.divIcon({
+            className: 'bubble-marker',
+            html, iconSize: [totalW, LABEL_H],
+            iconAnchor: [0, LABEL_H / 2],
+        });
+    }
+}
+
+/**
+ * 各マーカーの最適な方向としっぽ長さを決定
+ */
+function computeLayout() {
+    const visible = allEntries.filter(e => mapObj.hasLayer(e.marker));
+    visible.forEach(e => {
+        e.px = mapObj.latLngToContainerPoint(e.latlng);
+    });
+
+    // 配置済みの絶対矩形リスト
+    const placed = []; // { xMin, xMax, yMin, yMax }
+
+    // しっぽ長さの候補
+    const stemLens = [STEM_DEFAULT, 18, STEM_MAX];
+    // 方向の候補
+    const dirs = ['top', 'left', 'right'];
+
+    visible.forEach(entry => {
+        const px = entry.px;
+        let bestDir = 'top';
+        let bestStem = STEM_DEFAULT;
+        let bestOverlapCount = Infinity;
+
+        // 全方向 × 全しっぽ長さ を試し、重なりが最小の組合せを選ぶ
+        for (const dir of dirs) {
+            for (const stem of stemLens) {
+                const rect = labelRect(entry.obj.object_name, dir, stem);
+                // 絶対座標に変換
+                const absRect = {
+                    xMin: px.x + rect.xMin,
+                    xMax: px.x + rect.xMax,
+                    yMin: px.y + rect.yMin,
+                    yMax: px.y + rect.yMax,
+                };
+                let count = 0;
+                for (const p of placed) {
+                    if (rectsOverlap(absRect, p)) count++;
+                }
+                // 重なり数が少ないか、同じなら短いしっぽを優先
+                if (count < bestOverlapCount || (count === bestOverlapCount && stem < bestStem)) {
+                    bestOverlapCount = count;
+                    bestDir = dir;
+                    bestStem = stem;
+                }
+                if (count === 0 && stem === STEM_DEFAULT) break; // 最短で重ならないなら即決
+            }
+            if (bestOverlapCount === 0 && bestStem === STEM_DEFAULT) break;
+        }
+
+        entry.dir = bestDir;
+        entry.stem = bestStem;
+
+        // 配置済みリストに追加
+        const rect = labelRect(entry.obj.object_name, bestDir, bestStem);
+        placed.push({
+            xMin: px.x + rect.xMin,
+            xMax: px.x + rect.xMax,
+            yMin: px.y + rect.yMin,
+            yMax: px.y + rect.yMax,
+        });
+    });
+}
+
+function applyLayout() {
+    allEntries.filter(e => mapObj.hasLayer(e.marker)).forEach(entry => {
+        entry.marker.setIcon(createIcon(entry.obj.object_name, entry.dir, entry.stem));
+    });
+}
+
+function spreadOverlapping(data) {
+    const OFFSET_LNG = 0.00012;
+    const key = (lat, lng) => lat.toFixed(5) + ',' + lng.toFixed(5);
+    const groups = {};
+    data.forEach(obj => {
+        const k = key(obj.latitude, obj.longitude);
+        if (!groups[k]) groups[k] = [];
+        groups[k].push(obj);
+    });
+    const result = [];
+    Object.values(groups).forEach(group => {
+        const n = group.length;
+        group.forEach((obj, i) => {
+            const offset = (i - (n - 1) / 2) * OFFSET_LNG;
+            result.push({ ...obj, spreadLat: obj.latitude, spreadLng: obj.longitude + offset });
+        });
+    });
+    return result;
+}
+
+function openStore(idx) {
+    window.location.href = '/store/' + allEntries[idx].obj.object_id;
+}
+
+let currentGenre = 'all';
+
+function buildGenreButtons(data) {
+    const genres = [...new Set(data.map(o => o.genre).filter(g => g))].sort();
+    const container = document.getElementById('genre-filter');
+    genres.forEach(g => {
+        const btn = document.createElement('button');
+        btn.className = 'genre-btn';
+        btn.dataset.genre = g;
+        btn.textContent = g;
+        btn.onclick = () => filterGenre(g, btn);
+        container.appendChild(btn);
+    });
+}
+
+function filterGenre(genre, btn) {
+    currentGenre = genre;
+    document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    allEntries.forEach(entry => {
+        if (genre === 'all' || entry.obj.genre === genre) {
+            if (!mapObj.hasLayer(entry.marker)) entry.marker.addTo(mapObj);
+        } else {
+            if (mapObj.hasLayer(entry.marker)) mapObj.removeLayer(entry.marker);
+        }
+    });
+    setTimeout(() => { computeLayout(); applyLayout(); }, 100);
+}
+
+fetch('/api/objects/locations')
+    .then(res => res.json())
+    .then(data => {
+        if (!data.length) {
+            document.getElementById('empty-msg').style.display = 'flex';
+            return;
+        }
+
+        buildGenreButtons(data);
+
+        const spread = spreadOverlapping(data);
+        const bounds = [];
+
+        spread.forEach((obj, idx) => {
+            const latlng = [obj.spreadLat, obj.spreadLng];
+            bounds.push(latlng);
+            const marker = L.marker(latlng, {
+                icon: createIcon(obj.object_name, 'top', STEM_DEFAULT),
+            }).addTo(mapObj);
+            marker.on('click', () => openStore(idx));
+            allEntries.push({ obj, latlng, dir: 'top', stem: STEM_DEFAULT, marker });
+        });
+
+        if (bounds.length > 1) {
+            mapObj.fitBounds(bounds, { padding: [60, 60] });
+        } else if (bounds.length === 1) {
+            mapObj.setView(bounds[0], 17);
+        }
+
+        setTimeout(() => { computeLayout(); applyLayout(); }, 300);
+    })
+    .catch(err => console.error('Failed to load locations:', err));
+
+mapObj.on('zoomend moveend', () => {
+    if (allEntries.length > 0) {
+        computeLayout();
+        applyLayout();
+    }
+});
+</script>
+
+
+<!-- グループコード入力モーダル -->
+<div class="logout-overlay" id="group-code-modal">
+    <div class="logout-card">
+        <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
+        <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
+        <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="group_code" placeholder="グループコード"
+                value="{{ current_group_code or '' }}"
+                style="display:block;width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:14px;box-sizing:border-box;">
+            <div class="logout-card-actions">
+                <button type="button" class="btn-logout-cancel" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
+                <button type="submit" class="btn-logout-confirm" style="background:#1565c0;">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ログアウト確認モーダル -->
+<div class="logout-overlay" id="logout-modal">
+    <div class="logout-card">
+        <div class="logout-card-title">ログアウト</div>
+        <div class="logout-card-msg">ログアウトしますか？</div>
+        <div class="logout-card-actions">
+            <button class="btn-logout-cancel" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
+            <form method="post" action="/logout" style="display:inline;margin:0;flex:1;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-logout-confirm" style="width:100%;">ログアウト</button></form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

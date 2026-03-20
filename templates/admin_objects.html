@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>店舗管理 — 管理者</title>
+  <link rel="stylesheet" href="/static/style.css?v=20260320">
+  <style>
+    body { background: #f4f6f8; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .admin-wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { color: #1b5e20; font-size: 22px; margin-bottom: 4px; }
+    .nav-links { margin-bottom: 24px; font-size: 13px; }
+    .nav-links a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
+    .nav-links a:hover { text-decoration: underline; }
+
+    /* ===== 承認待ちリクエスト ===== */
+    .section-title { font-size: 17px; font-weight: bold; color: #1b5e20; margin: 28px 0 12px; border-left: 4px solid #2e7d32; padding-left: 10px; }
+    .request-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .request-table th, .request-table td { border: 1px solid #e0e0e0; padding: 10px 12px; font-size: 13px; }
+    .request-table th { background: #f4f4f4; font-weight: bold; text-align: center; }
+    .request-table td { text-align: center; }
+    .btn-approve { background: #28a745; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .btn-reject  { background: #dc3545; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 6px; }
+    .empty-msg { color: #888; font-size: 13px; padding: 8px 0; }
+
+    /* ===== 店舗グリッド ===== */
+    .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+    .store-card { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; }
+    .store-img-wrap { width: 100%; aspect-ratio: 4/3; background: #e8f5e9; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .store-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .store-img-placeholder { font-size: 40px; color: #a5d6a7; }
+    .store-info { padding: 10px 12px; flex: 1; }
+    .store-name { font-size: 14px; font-weight: bold; color: #1b5e20; margin-bottom: 8px; word-break: break-all; }
+    .store-id   { font-size: 11px; color: #aaa; margin-bottom: 10px; }
+    .upload-form { padding: 0 12px 12px; }
+    .upload-label { display: block; font-size: 11px; color: #555; margin-bottom: 4px; }
+    .upload-input { display: block; width: 100%; font-size: 12px; margin-bottom: 6px; }
+    .btn-upload { display: block; width: 100%; background: #2e7d32; color: white; border: none; padding: 7px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+    .btn-upload:hover { background: #1b5e20; }
+    .btn-del-img { display: block; width: 100%; background: white; color: #e57373; border: 1px solid #e57373; padding: 5px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-top: 4px; }
+    .btn-del-store { display: block; width: 100%; background: #c62828; color: white; border: none; padding: 7px; border-radius: 6px; font-size: 13px; cursor: pointer; margin-top: 8px; }
+    .btn-del-store:hover { background: #b71c1c; }
+    /* ===== 地図モーダル ===== */
+    .map-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .map-modal-overlay.active { display: flex; }
+    .map-modal {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .map-modal-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .map-modal-header h3 { margin: 0; font-size: 16px; color: #1b5e20; }
+    .map-modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #888; padding: 0 4px; }
+    #picker-map { height: 400px; width: 100%; }
+    .map-modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .map-modal-coords { font-size: 13px; color: #555; }
+    .map-modal-coords span { font-weight: bold; color: #1b5e20; }
+    .btn-map-confirm {
+      background: #2e7d32; color: white; border: none;
+      padding: 8px 20px; border-radius: 6px; font-size: 14px; cursor: pointer;
+    }
+    .btn-map-confirm:hover { background: #1b5e20; }
+    .btn-map-pick {
+      display: block; width: 100%;
+      background: #1565c0; color: white; border: none;
+      padding: 7px; border-radius: 6px; font-size: 13px; cursor: pointer;
+      margin-bottom: 6px;
+    }
+    .btn-map-pick:hover { background: #0d47a1; }
+    .loc-status { font-size: 11px; margin-bottom: 4px; }
+    .loc-status.set { color: #2e7d32; }
+    .loc-status.unset { color: #999; }
+
+    /* 削除確認モーダル */
+    .del-overlay { display: none; }
+    .del-overlay.open {
+      display: flex; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4); z-index: 10000; align-items: center; justify-content: center;
+    }
+    .del-card {
+      background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      padding: 28px 24px 20px; width: 320px; text-align: center;
+    }
+    .del-card-title { font-size: 17px; font-weight: bold; color: #c62828; margin-bottom: 10px; }
+    .del-card-name { font-size: 15px; font-weight: bold; color: #1b5e20; margin-bottom: 6px; }
+    .del-card-msg { font-size: 13px; color: #666; margin-bottom: 20px; }
+    .del-card-actions { display: flex; gap: 10px; }
+    .del-card-actions button, .del-card-actions input[type=submit] {
+      flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; border: none;
+    }
+    .btn-del-cancel { background: #f5f5f5; color: #333; }
+    .btn-del-confirm { background: #c62828; color: white; }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="">
+</head>
+<body>
+<div class="admin-wrap">
+  <h1>店舗管理</h1>
+  <div class="nav-links">
+    <a href="/admin/dashboard">ダッシュボード</a>
+    <a href="/admin/reviews">レビュー管理</a>
+    <a href="/admin/comments">口コミ管理</a>
+    <a href="/admin/users">ユーザー管理</a>
+    <a href="/admin/groups">グループ管理</a>
+    <a href="/admin/heatmap">ユーザー分析</a>
+    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+  </div>
+
+  <!-- ===== 承認待ちリクエスト ===== -->
+  <div class="section-title">店舗追加リクエスト（承認待ち）</div>
+  {% if pending_requests %}
+  <table class="request-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>ユーザーID</th>
+        <th>店舗名</th>
+        <th>日時</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for req in pending_requests %}
+      <tr>
+        <td>{{ req.request_id }}</td>
+        <td>{{ req.user_id }}</td>
+        <td>{{ req.object_name }}</td>
+        <td style="font-size:11px;">{{ req.created_at[:10] if req.created_at else '' }}</td>
+        <td>
+          <form method="post" action="/admin/approve_request" style="display:inline;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="request_id" value="{{ req.request_id }}">
+            <button type="submit" class="btn-approve">承認</button>
+          </form>
+          <form method="post" action="/admin/reject_request" style="display:inline;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="request_id" value="{{ req.request_id }}">
+            <button type="submit" class="btn-reject">却下</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-msg">承認待ちのリクエストはありません。</p>
+  {% endif %}
+
+  <!-- ===== 登録済み店舗 ===== -->
+  <div class="section-title">登録済み店舗（{{ objects | length }}件）</div>
+  <div class="store-grid">
+    {% for obj in objects %}
+    <div class="store-card">
+      <!-- 画像表示エリア -->
+      <div class="store-img-wrap">
+        {% if obj.image_url %}
+          <img src="{{ obj.image_url }}" alt="{{ obj.object_name }}">
+        {% else %}
+          <span class="store-img-placeholder">🍽️</span>
+        {% endif %}
+      </div>
+
+      <div class="store-info">
+        <div class="store-name">{{ obj.object_name }}</div>
+        <div class="store-id">ID: {{ obj.object_id }}{% if obj.genre %} / {{ obj.genre }}{% endif %}</div>
+      </div>
+
+      <!-- ジャンル設定 -->
+      <div class="upload-form">
+        <form method="post" action="/admin/objects/set_genre"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="object_id" value="{{ obj.object_id }}">
+          <label class="upload-label">ジャンル</label>
+          <select name="genre" style="width:100%;padding:4px;font-size:12px;border:1px solid #ccc;border-radius:4px;margin-bottom:6px;">
+            <option value="" {% if not obj.genre %}selected{% endif %}>未設定</option>
+            {% for g in genres %}
+            <option value="{{ g }}" {% if obj.genre == g %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn-upload">ジャンルを保存</button>
+        </form>
+      </div>
+
+      <!-- 画像アップロードフォーム -->
+      <div class="upload-form">
+        <form method="post" action="/admin/objects/upload_image" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="object_id" value="{{ obj.object_id }}">
+          <label class="upload-label">画像を選択（JPG / PNG / WebP）</label>
+          <input type="file" name="image" accept="image/*" class="upload-input" required>
+          <button type="submit" class="btn-upload">アップロード</button>
+        </form>
+        {% if obj.image_url %}
+        <form method="post" action="/admin/objects/delete_image"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="object_id" value="{{ obj.object_id }}">
+          <button type="submit" class="btn-del-img" onclick="return confirm('画像を削除しますか？')">画像を削除</button>
+        </form>
+        {% endif %}
+      </div>
+      <!-- 位置情報 -->
+      <div class="upload-form">
+        {% if obj.latitude and obj.longitude %}
+        <div class="loc-status set">位置設定済み ({{ "%.5f"|format(obj.latitude) }}, {{ "%.5f"|format(obj.longitude) }})</div>
+        {% else %}
+        <div class="loc-status unset">位置未設定</div>
+        {% endif %}
+        <button type="button" class="btn-map-pick"
+                onclick="openMapPicker('{{ obj.object_id }}', '{{ obj.object_name }}', {{ obj.latitude or 'null' }}, {{ obj.longitude or 'null' }})">
+          地図から選択
+        </button>
+      </div>
+      <!-- 店舗削除 -->
+      <div class="upload-form">
+        <button type="button" class="btn-del-store"
+          onclick="openDeleteModal('{{ obj.object_id }}', '{{ obj.object_name }}')">
+          店舗を削除
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ===== 地図ピッカーモーダル ===== -->
+<div id="map-modal" class="map-modal-overlay">
+  <div class="map-modal">
+    <div class="map-modal-header">
+      <h3 id="picker-title">位置を選択</h3>
+      <button class="map-modal-close" onclick="closeMapPicker()">&times;</button>
+    </div>
+    <div id="picker-map"></div>
+    <div class="map-modal-footer">
+      <div class="map-modal-coords">
+        緯度: <span id="picked-lat">-</span>　経度: <span id="picked-lng">-</span>
+      </div>
+      <button class="btn-map-confirm" id="btn-confirm" onclick="confirmLocation()" disabled>この位置で保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+<script>
+const DEFAULT_CENTER = [35.6965, 139.7580];
+const DEFAULT_ZOOM = 17;
+
+let pickerMap = null;
+let pickerMarker = null;
+let currentObjectId = null;
+let pickedLat = null;
+let pickedLng = null;
+
+function openMapPicker(objectId, objectName, lat, lng) {
+    currentObjectId = objectId;
+    pickedLat = lat;
+    pickedLng = lng;
+
+    document.getElementById('picker-title').textContent = objectName + ' の位置を選択';
+    document.getElementById('map-modal').classList.add('active');
+
+    const center = (lat && lng) ? [lat, lng] : DEFAULT_CENTER;
+
+    if (!pickerMap) {
+        pickerMap = L.map('picker-map').setView(center, DEFAULT_ZOOM);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 19,
+        }).addTo(pickerMap);
+
+        pickerMap.on('click', function(e) {
+            setPickerMarker(e.latlng.lat, e.latlng.lng);
+        });
+    } else {
+        pickerMap.setView(center, DEFAULT_ZOOM);
+    }
+
+    // 少し遅延してリサイズ（モーダル表示後にmapサイズを認識させる）
+    setTimeout(() => { pickerMap.invalidateSize(); }, 100);
+
+    if (lat && lng) {
+        setPickerMarker(lat, lng);
+    } else {
+        clearPickerMarker();
+    }
+}
+
+function setPickerMarker(lat, lng) {
+    pickedLat = Math.round(lat * 1e6) / 1e6;
+    pickedLng = Math.round(lng * 1e6) / 1e6;
+
+    if (pickerMarker) {
+        pickerMarker.setLatLng([lat, lng]);
+    } else {
+        pickerMarker = L.marker([lat, lng], { draggable: true }).addTo(pickerMap);
+        pickerMarker.on('dragend', function() {
+            const pos = pickerMarker.getLatLng();
+            setPickerMarker(pos.lat, pos.lng);
+        });
+    }
+
+    document.getElementById('picked-lat').textContent = pickedLat;
+    document.getElementById('picked-lng').textContent = pickedLng;
+    document.getElementById('btn-confirm').disabled = false;
+}
+
+function clearPickerMarker() {
+    if (pickerMarker) {
+        pickerMap.removeLayer(pickerMarker);
+        pickerMarker = null;
+    }
+    pickedLat = null;
+    pickedLng = null;
+    document.getElementById('picked-lat').textContent = '-';
+    document.getElementById('picked-lng').textContent = '-';
+    document.getElementById('btn-confirm').disabled = true;
+}
+
+function closeMapPicker() {
+    document.getElementById('map-modal').classList.remove('active');
+}
+
+function confirmLocation() {
+    if (!currentObjectId || pickedLat === null || pickedLng === null) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/admin/objects/set_location';
+
+    [['object_id', currentObjectId], ['latitude', pickedLat], ['longitude', pickedLng]].forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// --- 削除確認モーダル ---
+function openDeleteModal(objectId, objectName) {
+    document.getElementById('del-store-name').textContent = objectName;
+    document.getElementById('del-object-id').value = objectId;
+    document.getElementById('del-modal').classList.add('open');
+}
+function closeDeleteModal() {
+    document.getElementById('del-modal').classList.remove('open');
+}
+</script>
+
+<!-- 店舗削除確認モーダル -->
+<div class="del-overlay" id="del-modal">
+  <div class="del-card">
+    <div class="del-card-title">店舗を削除</div>
+    <div class="del-card-name" id="del-store-name"></div>
+    <div class="del-card-msg">この店舗と関連する評価・推薦データがすべて削除されます。この操作は取り消せません。</div>
+    <form method="post" action="/admin/objects/delete" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="object_id" id="del-object-id" value="">
+      <div class="del-card-actions">
+        <button type="button" class="btn-del-cancel" onclick="closeDeleteModal()">キャンセル</button>
+        <input type="submit" class="btn-del-confirm" value="削除する">
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

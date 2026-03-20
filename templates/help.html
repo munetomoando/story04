@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ヘルプ — ランチマップ</title>
+    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <style>
+        .help-main { max-width: 640px; margin: 0 auto; padding: 20px 16px 100px; }
+        .help-section { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 16px; }
+        .help-section h2 { font-size: 17px; color: #1b5e20; margin: 0 0 12px; border-left: 4px solid #2e7d32; padding-left: 10px; }
+        .help-section h3 { font-size: 14px; color: #333; margin: 16px 0 8px; }
+        .help-section p, .help-section li { font-size: 13px; color: #444; line-height: 1.7; }
+        .help-section ul, .help-section ol { padding-left: 20px; margin: 8px 0; }
+        .help-section li { margin-bottom: 4px; }
+        .help-diagram {
+            background: #f8faf8; border: 1px solid #e0e0e0; border-radius: 8px;
+            padding: 16px; margin: 12px 0; font-size: 13px; line-height: 1.8;
+            text-align: center; color: #333;
+        }
+        .help-diagram .formula { font-family: monospace; font-size: 14px; color: #1b5e20; font-weight: bold; }
+        .star-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+        .star-table th, .star-table td { border: 1px solid #e0e0e0; padding: 6px 10px; text-align: center; }
+        .star-table th { background: #f4f4f4; font-size: 12px; color: #666; }
+        .star-table td:first-child { font-weight: bold; color: #f59e0b; }
+        .help-step {
+            display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px;
+        }
+        .help-step-num {
+            flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+            background: #2e7d32; color: white; font-size: 14px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .help-step-text { flex: 1; font-size: 13px; color: #444; line-height: 1.6; padding-top: 3px; }
+    </style>
+</head>
+<body class="app-page">
+
+<header class="app-header">
+    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">神田三崎町ランチマップ</a>
+    <span class="header-user" onclick="this.querySelector('.header-user-menu').classList.toggle('open')">
+        {{ username }} ▾
+        <div class="header-user-menu" id="user-menu">
+            <a class="header-user-menu-item" href="/help" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">ヘルプ</a>
+            <button class="header-user-menu-item" style="color:#1565c0;" onclick="event.stopPropagation();document.getElementById('group-code-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">グループコード</button>
+            <button class="header-user-menu-item" onclick="event.stopPropagation();document.getElementById('logout-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">ログアウト</button>
+        </div>
+    </span>
+</header>
+
+<main class="help-main">
+
+    <section class="help-section">
+        <h2>ランチマップの使い方</h2>
+        <p>神田三崎町ランチマップは、みんなの評価をもとにあなたに合うお店を見つけるアプリです。</p>
+        <ul>
+            <li><strong>評価ページ</strong> — お店を1〜5点で評価します。知らないお店はスキップできます。</li>
+            <li><strong>おすすめページ</strong> — あなたの好みに合いそうなお店を自動で提案します。</li>
+            <li><strong>マップ</strong> — 登録されているお店の場所を地図で確認できます。</li>
+            <li><strong>リクエスト</strong> — まだ登録されていないお店の追加をリクエストできます。</li>
+            <li><strong>店舗詳細</strong> — お店の写真、評価の分布、口コミを見ることができます。口コミの投稿もここからできます。</li>
+        </ul>
+    </section>
+
+    <section class="help-section">
+        <h2>おすすめの仕組み</h2>
+        <p>おすすめは<strong>「協調フィルタリング」</strong>という技術で決まっています。あなたの評価傾向を分析し、好みが似ている他のユーザーの評価をもとに、あなたがまだ評価していないお店の中からおすすめを提案します。</p>
+
+        <h3>おすすめが決まるまでの流れ</h3>
+
+        <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-text">
+                <strong>評価の標準化</strong><br>
+                人によって評価の傾向は異なります（全体的に高めにつける人、厳しめの人など）。この違いを補正するため、各ユーザーの評価を「自分の平均からどれだけ離れているか」に変換します。
+            </div>
+        </div>
+
+        <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-text">
+                <strong>好みの近さを測る</strong><br>
+                補正後の評価パターンを使って、全ユーザー間の「好みの近さ（類似度）」を計算します。同じお店を同じように高く（または低く）評価しているユーザー同士は類似度が高くなります。
+            </div>
+        </div>
+
+        <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-text">
+                <strong>好みが近いユーザーを選ぶ</strong><br>
+                類似度が一定以上（0.3以上）のユーザーを全員「好みが近いユーザー」として採用します。固定人数ではなく、好みが近い人が多ければ多いほど推薦の精度が上がります。
+            </div>
+        </div>
+
+        <div class="help-step">
+            <div class="help-step-num">4</div>
+            <div class="help-step-text">
+                <strong>おすすめスコアを計算</strong><br>
+                あなたが未評価の各お店について、好みが近いユーザーの評価を「類似度で重みづけした平均」として算出します。より好みが近い人の評価ほど強く反映されます。
+            </div>
+        </div>
+
+        <div class="help-diagram">
+            <div class="formula">
+                おすすめスコア = Σ(類似度 × 補正済み評価) ÷ Σ(類似度)
+            </div>
+            <div style="margin-top:6px; font-size:12px; color:#888;">
+                ※ 好みが近いユーザーのうち、そのお店を評価済みのユーザーのみで計算
+            </div>
+        </div>
+
+        <h3>星の意味</h3>
+        <table class="star-table">
+            <thead>
+                <tr><th>表示</th><th>スコア</th><th>意味</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>★★★</td><td>0.75 以上</td><td>あなたの好みにとても合いそう</td></tr>
+                <tr><td>★★</td><td>0.50 〜 0.75</td><td>好みに合う可能性が高い</td></tr>
+                <tr><td>★</td><td>0.25 〜 0.50</td><td>合うかもしれない</td></tr>
+            </tbody>
+        </table>
+
+        <h3>おすすめの精度を上げるには</h3>
+        <ul>
+            <li>できるだけ多くのお店を評価すると、あなたの好みをより正確に分析できます。</li>
+            <li>他のユーザーの参加が増えると、類似ユーザーが見つかりやすくなり精度が向上します。</li>
+            <li>知らないお店はスキップして構いません。無理に評価すると精度が下がることがあります。</li>
+        </ul>
+    </section>
+
+    <section class="help-section">
+        <h2>みんなの人気店について</h2>
+        <p>おすすめページの「みんなの人気店」は、全ユーザーの評価の平均点が高い順にランキングしたものです。協調フィルタリングとは異なり、あなた個人の好みとは関係なく全体の人気度を示しています。</p>
+    </section>
+
+    <section class="help-section">
+        <h2>グループコードについて</h2>
+        <p>グループコードを設定すると、同じコードのメンバー内でのおすすめ分析を管理者が行えるようになります。ユーザー名の横にある「▾」メニューから設定できます。</p>
+    </section>
+
+</main>
+
+<nav class="bottom-nav">
+    <a href="/rating" class="nav-item">
+        <span class="nav-icon">⭐</span>
+        <span class="nav-label">評価</span>
+    </a>
+    <a href="/recommendations" class="nav-item">
+        <span class="nav-icon">🍽️</span>
+        <span class="nav-label">おすすめ</span>
+    </a>
+    <a href="/map" class="nav-item">
+        <span class="nav-icon">🗺️</span>
+        <span class="nav-label">マップ</span>
+    </a>
+    <a href="/request_object" class="nav-item">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">リクエスト</span>
+    </a>
+</nav>
+
+<!-- グループコード入力モーダル -->
+<div class="logout-overlay" id="group-code-modal">
+    <div class="logout-card">
+        <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
+        <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
+        <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="group_code" placeholder="グループコード"
+                value="{{ current_group_code or '' }}"
+                style="display:block;width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:14px;box-sizing:border-box;">
+            <div class="logout-card-actions">
+                <button type="button" class="btn-logout-cancel" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
+                <button type="submit" class="btn-logout-confirm" style="background:#1565c0;">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ログアウト確認モーダル -->
+<div class="logout-overlay" id="logout-modal">
+    <div class="logout-card">
+        <div class="logout-card-title">ログアウト</div>
+        <div class="logout-card-msg">ログアウトしますか？</div>
+        <div class="logout-card-actions">
+            <button class="btn-logout-cancel" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
+            <form method="post" action="/logout" style="display:inline;margin:0;flex:1;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-logout-confirm" style="width:100%;">ログアウト</button></form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

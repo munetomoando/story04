@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>グループ管理 — 管理者</title>
+  <style>
+    body { background: #f4f6f8; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .admin-wrap { max-width: 800px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { color: #1b5e20; font-size: 22px; margin-bottom: 4px; }
+    .nav-links { margin-bottom: 20px; font-size: 13px; }
+    .nav-links a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
+    .nav-links a:hover { text-decoration: underline; }
+    .section-title { font-size: 17px; font-weight: bold; color: #1b5e20; margin: 24px 0 12px; border-left: 4px solid #2e7d32; padding-left: 10px; }
+    .create-form {
+      background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 16px; margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;
+    }
+    .create-form label { font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px; }
+    .create-form input {
+      padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+    }
+    .btn-create { background: #2e7d32; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; }
+    .btn-create:hover { background: #1b5e20; }
+    .group-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .group-table th, .group-table td { border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px; }
+    .group-table th { background: #f4f4f4; font-weight: bold; text-align: center; }
+    .group-table td { text-align: center; }
+    .td-code { font-weight: bold; font-family: monospace; font-size: 14px; color: #1565c0; }
+    .td-label { text-align: left !important; }
+    .btn-del { background: #dc3545; color: white; border: none; padding: 4px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .btn-del:hover { background: #c82333; }
+    .empty-msg { color: #888; font-size: 13px; }
+  </style>
+</head>
+<body>
+<div class="admin-wrap">
+  <h1>グループ管理</h1>
+  <div class="nav-links">
+    <a href="/admin/dashboard">ダッシュボード</a>
+    <a href="/admin/reviews">レビュー管理</a>
+    <a href="/admin/objects">店舗管理</a>
+    <a href="/admin/comments">口コミ管理</a>
+    <a href="/admin/users">ユーザー管理</a>
+    <a href="/admin/heatmap">ユーザー分析</a>
+    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+  </div>
+
+  <div class="section-title">グループコード作成</div>
+  <form method="post" action="/admin/groups/create" class="create-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <label for="code">コード</label>
+      <input type="text" name="code" id="code" required placeholder="例: classA-2026" style="width:180px;">
+    </div>
+    <div>
+      <label for="label">表示名</label>
+      <input type="text" name="label" id="label" required placeholder="例: 2026年度 Aクラス" style="width:220px;">
+    </div>
+    <button type="submit" class="btn-create">作成</button>
+  </form>
+
+  <div class="section-title">登録済みグループ（{{ groups | length }}件）</div>
+  {% if groups %}
+  <table class="group-table">
+    <thead>
+      <tr>
+        <th>コード</th>
+        <th>表示名</th>
+        <th>作成日</th>
+        <th>ユーザー数</th>
+        <th>分析</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in groups %}
+      <tr>
+        <td class="td-code">{{ g.code }}</td>
+        <td class="td-label">{{ g.label }}</td>
+        <td>{{ g.created_at }}</td>
+        <td>{{ g.user_count }}人</td>
+        <td><a href="/admin/heatmap?group_code={{ g.code }}" style="color:#1565c0;font-weight:bold;font-size:12px;">分析を見る</a></td>
+        <td>
+          <form method="post" action="/admin/groups/delete" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="code" value="{{ g.code }}">
+            <button type="submit" class="btn-del"
+              onclick="return confirm('「{{ g.label }}」を削除しますか？\n所属ユーザーのグループコードもクリアされます。')">削除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-msg">グループコードはまだ作成されていません。</p>
+  {% endif %}
+</div>
+</body>
+</html>

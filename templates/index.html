@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Comic+Neue:wght@300;400;700&family=Yomogi&display=swap" rel="stylesheet">
     <title>Clustering Workshop ログイン</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=20260320">
 </head>
 <script>
     // 3秒後にフラッシュメッセージを消す
@@ -42,12 +42,12 @@
             </div>
         {% endif %}
 
-        <form method="post" action="/login" class="form-container">
+        <form method="post" action="/login" class="form-container"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <label for="username">ユーザー名:</label>
-            <input type="text" id="username" name="username" placeholder="ユーザー名" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます">
-            
+            <input type="text" id="username" name="username" placeholder="ユーザー名" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます" autocomplete="username">
+
             <label for="password">パスワード:</label>
-            <input type="password" id="password" name="password" placeholder="パスワード" required>
+            <input type="password" id="password" name="password" placeholder="パスワード" required autocomplete="current-password">
             
             <button type="submit" class="login-button">ログイン</button>
         </form>

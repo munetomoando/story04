@@ -17,12 +17,14 @@ body {
 
 /* コンテナのデザイン */
 .container {
-    max-width: 800px;
-    margin: 50px auto;
+    max-width: 480px;
+    width: 92%;
+    margin: 30px auto;
     background: #ffffff;
     padding: 20px;
     border-radius: 12px;
     box-shadow: 0px 4px 10px rgba(0, 128, 0, 0.2);
+    box-sizing: border-box;
     text-align: center;
 }
 
@@ -48,7 +50,7 @@ h1 {
 
 .title-large {
     display: block;
-    font-size: 32px;
+    font-size: clamp(22px, 7vw, 32px);
     font-weight: bold;
     color: #1b5e20;
 }
@@ -63,10 +65,12 @@ h1 {
 /* ログインコンテナデザイン */
 .login-container {
     max-width: 400px;
-    width: 90%;
-    margin: 50px auto;
-    padding: 20px;
+    width: 92%;
+    margin: 30px auto;
+    padding: 16px;
     background: #f8f9fa;
+    box-sizing: border-box;
+    overflow: hidden;
     border-radius: 8px;
     box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
     text-align: center;
@@ -87,10 +91,11 @@ h1 {
 /* フォームデザイン */
 .form-container {
     width: 100%;
-    max-width: 400px;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 16px;
     background: white;
+    box-sizing: border-box;
     border-radius: 10px;
     box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
     text-align: center;
@@ -100,11 +105,13 @@ h1 {
 .form-container input {
     display: block;
     width: 100%;
-    max-width: 300px;
+    max-width: 100%;
     padding: 10px;
     margin: 8px auto 15px auto;
+    box-sizing: border-box;
     border: 1px solid #ccc;
     border-radius: 5px;
+    font-size: 16px; /* iOS Safari の自動ズームを防止 */
 }
 
 /* ボタンデザイン */
@@ -228,14 +235,17 @@ td {
 }
 
 .register-button {
-    display: inline-block;
-    background-color: #007bff; /* ✅ ブルー系のボタン */
+    display: block;
+    width: 100%;
+    background-color: #007bff;
     color: white;
     text-decoration: none;
     font-size: 16px;
     font-weight: bold;
-    padding: 10px 20px;
+    padding: 12px 20px;
     border-radius: 8px;
+    box-sizing: border-box;
+    text-align: center;
     transition: background-color 0.3s ease;
 }
 
@@ -246,7 +256,7 @@ td {
 .login-button {
     display: block;
     width: 100%;
-    max-width: 300px;
+    max-width: 100%;
     margin: 20px auto;
     padding: 12px 20px;
     font-size: 18px;
@@ -581,3 +591,874 @@ td {
         width: 100%;
     }
 }
+
+/* =====================================================
+   モバイルファーストアプリ共通レイアウト
+   ===================================================== */
+
+/* アプリ全体 */
+body.app-page {
+    background-color: #f0f7f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 70px; /* 下部タブ分の余白 */
+}
+
+/* ヘッダー */
+.app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    background-color: #2e7d32;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.header-title {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.header-user {
+    font-size: 13px;
+    opacity: 0.85;
+    position: relative;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.header-user:active {
+    background: rgba(255,255,255,0.15);
+}
+
+.header-user-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    min-width: 140px;
+    overflow: hidden;
+    z-index: 200;
+}
+
+.header-user-menu.open {
+    display: block;
+}
+
+.header-user-menu-item {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #c62828;
+    font-weight: bold;
+    text-align: left;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.header-user-menu-item:active {
+    background: #f5f5f5;
+}
+
+/* メニュー外クリックで閉じるための透明オーバーレイ */
+.header-user-menu.open::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+}
+
+/* ===== ログアウト確認モーダル ===== */
+.logout-overlay {
+    display: none;
+}
+.logout-overlay.open {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+.logout-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    padding: 28px 24px 20px;
+    width: 280px;
+    text-align: center;
+    position: relative;
+}
+.logout-card-title {
+    font-size: 17px;
+    font-weight: bold;
+    color: #1b5e20;
+    margin: 0 0 8px;
+}
+.logout-card-msg {
+    font-size: 13px;
+    color: #666;
+    margin: 0 0 24px;
+}
+.logout-card-actions {
+    display: flex;
+    gap: 10px;
+}
+.logout-card-actions button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.btn-logout-confirm {
+    background: #c62828;
+    color: white;
+}
+.btn-logout-confirm:active { background: #b71c1c; }
+.btn-logout-cancel {
+    background: #f5f5f5;
+    color: #333;
+}
+.btn-logout-cancel:active { background: #e0e0e0; }
+
+/* メインコンテンツ */
+.app-main {
+    margin-top: 52px;
+    padding: 16px;
+    flex: 1;
+    max-width: 480px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 下部タブナビゲーション */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: white;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 100;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+}
+
+.nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #888;
+    font-size: 11px;
+    padding: 6px 0;
+    transition: color 0.2s;
+}
+
+.nav-item.nav-active {
+    color: #2e7d32;
+}
+
+.nav-icon {
+    font-size: 20px;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.nav-label {
+    font-size: 11px;
+}
+
+/* =====================================================
+   評価モード選択
+   ===================================================== */
+
+.mode-btn-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: white;
+    border: 2px solid #a5d6a7;
+    border-radius: 14px;
+    padding: 16px 18px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mode-btn:active {
+    background: #e8f5e9;
+    border-color: #2e7d32;
+    transform: scale(0.98);
+}
+
+.mode-btn-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.mode-btn-label {
+    flex: 1;
+    font-size: 15px;
+    font-weight: bold;
+    color: #1b5e20;
+}
+
+.mode-btn-count {
+    font-size: 13px;
+    color: #888;
+    white-space: nowrap;
+}
+
+/* =====================================================
+   評価カードUI
+   ===================================================== */
+
+.progress-bar-wrap {
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: #2e7d32;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    margin: 0 0 16px;
+}
+
+.card-container {
+    min-height: 200px;
+}
+
+.rating-card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px 20px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    text-align: center;
+    animation: slideIn 0.25s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+.card-store-img {
+    width: 100%;
+    max-height: 180px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.card-store-name {
+    font-size: 22px;
+    font-weight: bold;
+    color: #1b5e20;
+    margin-bottom: 24px;
+    line-height: 1.3;
+}
+
+.rating-btn-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.rating-btn {
+    width: 52px;
+    height: 52px;
+    border: 2px solid #a5d6a7;
+    border-radius: 12px;
+    background: white;
+    font-size: 18px;
+    font-weight: bold;
+    color: #2e7d32;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.rating-btn:active {
+    transform: scale(0.92);
+}
+
+.rating-btn.selected {
+    background: #2e7d32;
+    border-color: #2e7d32;
+    color: white;
+}
+
+.rating-btn.small {
+    width: 44px;
+    height: 44px;
+    font-size: 15px;
+    border-radius: 8px;
+}
+
+.card-nav {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.btn-skip {
+    background: none;
+    border: 1px solid #bdbdbd;
+    color: #888;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-skip:active {
+    background: #f5f5f5;
+}
+
+.btn-back {
+    background: none;
+    border: 1px solid #a5d6a7;
+    color: #2e7d32;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-back:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.btn-back:not(:disabled):active {
+    background: #e8f5e9;
+}
+
+@keyframes slideInBack {
+    from { opacity: 0; transform: translateX(-40px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+.card-slide-back {
+    animation: slideInBack 0.25s ease;
+}
+
+/* 完了画面 */
+.done-section {
+    text-align: center;
+    padding: 32px 16px;
+}
+
+.done-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.done-title {
+    font-size: 20px;
+    color: #1b5e20;
+    margin-bottom: 8px;
+}
+
+.done-desc {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 24px;
+}
+
+/* 評価済み一覧 */
+.rated-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 4px;
+    border-bottom: 1px solid #e8f5e9;
+    gap: 8px;
+}
+
+.rated-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: #2e7d32;
+    flex: 1;
+    text-align: left;
+}
+
+.rated-btn-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.btn-clear {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #e57373;
+    border-radius: 8px;
+    background: white;
+    color: #e57373;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-unrated {
+    height: 44px;
+    border: 2px solid #a5d6a7;
+    border-radius: 8px;
+    background: white;
+    color: #888;
+    cursor: pointer;
+    font-weight: bold;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-unrated.active {
+    background: #2e7d32 !important;
+    border-color: #2e7d32 !important;
+    color: white !important;
+    transition: all 0.15s;
+}
+
+/* =====================================================
+   おすすめ結果カードUI
+   ===================================================== */
+
+.rec-section {
+    margin-bottom: 24px;
+}
+
+.rec-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rec-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: transform 0.15s;
+}
+
+.rec-card:active {
+    transform: scale(0.98);
+}
+
+.rec-card-inner {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rec-store-name {
+    flex: 1;
+    font-size: 17px;
+    font-weight: bold;
+    color: #1b5e20;
+}
+
+.rec-stars {
+    font-size: 18px;
+    color: #f59e0b;
+    white-space: nowrap;
+}
+
+.rec-score {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 16px;
+    color: #888;
+}
+
+.empty-state p {
+    margin-bottom: 8px;
+}
+
+/* 人気店ランキング */
+.popular-section {
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+
+.popular-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.popular-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f5f5f5;
+    gap: 12px;
+}
+
+.popular-item:last-child {
+    border-bottom: none;
+}
+
+.popular-rank {
+    width: 24px;
+    height: 24px;
+    background: #2e7d32;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.popular-name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: bold;
+    color: #1b5e20;
+}
+
+.popular-score {
+    font-size: 12px;
+    color: #888;
+}
+
+.logout-area {
+    text-align: center;
+    padding: 16px 0 8px;
+}
+
+.btn-logout-small {
+    background: none;
+    border: 1px solid #e57373;
+    color: #e57373;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* =====================================================
+   共通ボタン・フォームパーツ
+   ===================================================== */
+
+.btn-primary {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    margin-bottom: 12px;
+    transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary:active {
+    background: #1b5e20;
+}
+
+.btn-secondary {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: white;
+    color: #2e7d32;
+    border: 2px solid #2e7d32;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    margin-bottom: 12px;
+    transition: background 0.2s;
+}
+
+.btn-secondary:active {
+    background: #e8f5e9;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #2e7d32;
+    margin: 0 0 12px;
+}
+
+.page-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.page-title {
+    font-size: 20px;
+    color: #1b5e20;
+    margin: 0 0 8px;
+}
+
+.page-desc {
+    font-size: 13px;
+    color: #666;
+    margin: 0 0 20px;
+}
+
+.form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    color: #2e7d32;
+    margin-bottom: 6px;
+}
+
+.form-input {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #a5d6a7;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus {
+    border-color: #2e7d32;
+}
+
+.request-form {
+    margin-bottom: 24px;
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.alert-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+.alert-error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+
+.request-history {
+    border-top: 1px solid #e8f5e9;
+    padding-top: 16px;
+}
+
+.request-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.request-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 14px;
+}
+
+.request-name {
+    color: #333;
+}
+
+.request-status {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+}
+
+.status-pending  { background: #fff8e1; color: #f57f17; }
+.status-approved { background: #e8f5e9; color: #2e7d32; }
+.status-rejected { background: #ffebee; color: #c62828; }
+
+/* =====================================================
+   管理画面 - 評価マトリクス大規模テーブル（A+B）
+   A: スティッキー列 + 横スクロール
+   B: セル縮小 + ホバーtooltip
+   ===================================================== */
+
+/* A: スクロールコンテナ */
+.admin-table-wrap {
+    overflow: auto;
+    max-height: 70vh;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.admin-matrix-table {
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+/* ヘッダー行を上端に固定（A） */
+.admin-matrix-table th.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #f4f4f4;
+    font-weight: bold;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 1px solid #ddd;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ユーザー名列を左端に固定（A） */
+.admin-matrix-table .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: white;
+    padding: 4px 8px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    min-width: 80px;
+}
+
+/* 左上コーナーセルは最高z-index */
+.admin-matrix-table th.sticky-col.sticky-header {
+    z-index: 3;
+    background-color: #f4f4f4;
+}
+
+/* スコアセル - テキスト付きコンパクト表示 */
+.admin-matrix-table td.score-cell {
+    width: 54px;
+    min-width: 54px;
+    padding: 3px 2px;
+    border: 1px solid #ddd;
+    text-align: center;
+    vertical-align: middle;
+    position: relative;
+    overflow: visible;
+}
+
+.cell-inner {
+    font-size: 9px;
+    line-height: 1.4;
+    color: #222;
+    transition: all 0.15s ease;
+}
+
+/* ホバー時に拡大表示 */
+.admin-matrix-table td.score-cell:hover {
+    overflow: visible;
+    z-index: 50;
+}
+
+.admin-matrix-table td.score-cell:hover .cell-inner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(2.2);
+    transform-origin: center center;
+    background: inherit;
+    padding: 6px 8px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 50;
+    font-size: 9px;
+    white-space: nowrap;
+}
+
+/* スコア色（B） */
+.admin-matrix-table td.score-non  { background-color: #f9f9f9; }
+.admin-matrix-table td.score-low  { background-color: #d6ebff; }
+.admin-matrix-table td.score-mid  { background-color: #cce5ff; }
+.admin-matrix-table td.score-high { background-color: #99ccff; }
+.admin-matrix-table td.no-data    { background-color: #f9f9f9; }
+

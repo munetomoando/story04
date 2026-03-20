@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ダッシュボード — 管理者</title>
+  <style>
+    body { background: #f4f6f8; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .admin-wrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { color: #1b5e20; font-size: 22px; margin-bottom: 4px; }
+    .nav-links { margin-bottom: 20px; font-size: 13px; }
+    .nav-links a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
+    .nav-links a:hover { text-decoration: underline; }
+    .section-title {
+      font-size: 17px; font-weight: bold; color: #1b5e20;
+      margin: 28px 0 12px; border-left: 4px solid #2e7d32; padding-left: 10px;
+    }
+    .chart-img { width: 100%; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); margin-bottom: 16px; }
+    .no-data { color: #aaa; font-size: 13px; padding: 12px 0; }
+
+    /* アラートカード */
+    .alert-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .alert-card {
+      background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 14px 16px; border-left: 4px solid #f59e0b;
+    }
+    .alert-card.critical { border-left-color: #dc3545; }
+    .alert-card.info { border-left-color: #1565c0; }
+    .alert-card-title { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 6px; }
+    .alert-card-count { font-size: 28px; font-weight: bold; color: #1b5e20; }
+    .alert-card-list { font-size: 12px; color: #666; margin-top: 6px; max-height: 100px; overflow-y: auto; line-height: 1.6; }
+
+    /* 運営テーブル */
+    .ops-card {
+      background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 16px; margin-bottom: 12px;
+    }
+    .ops-title { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px; }
+    .ops-stat { display: flex; gap: 24px; margin-bottom: 8px; }
+    .ops-stat-item { text-align: center; }
+    .ops-stat-num { font-size: 28px; font-weight: bold; color: #1b5e20; }
+    .ops-stat-label { font-size: 11px; color: #888; }
+    .report-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .report-table th, .report-table td { border: 1px solid #e0e0e0; padding: 4px 8px; }
+    .report-table th { background: #f4f4f4; font-size: 11px; text-align: center; }
+    .report-table td { vertical-align: top; }
+    .btn-del-sm { background: #dc3545; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="admin-wrap">
+  <h1>ダッシュボード</h1>
+  <div class="nav-links">
+    <a href="/admin/reviews">レビュー管理</a>
+    <a href="/admin/objects">店舗管理</a>
+    <a href="/admin/comments">口コミ管理</a>
+    <a href="/admin/users">ユーザー管理</a>
+    <a href="/admin/groups">グループ管理</a>
+    <a href="/admin/heatmap">ユーザー分析</a>
+    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+  </div>
+
+  <!-- ===== 利用状況トレンド ===== -->
+  <div class="section-title">利用状況トレンド（{{ period_label }}）</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+    {% for val, label in [('1','1日'),('7','1週間'),('30','30日'),('90','90日'),('180','180日'),('365','1年')] %}
+    <a href="/admin/dashboard?period={{ val }}"
+       style="padding:6px 14px;border-radius:8px;font-size:13px;font-weight:bold;text-decoration:none;
+              {% if current_period == val %}background:#2e7d32;color:white;{% else %}background:white;color:#2e7d32;border:1px solid #2e7d32;{% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+  {% if chart_activity %}
+    <img src="data:image/png;base64,{{ chart_activity }}" class="chart-img" alt="Activity">
+  {% else %}
+    <p class="no-data">データがありません</p>
+  {% endif %}
+  {% if chart_content %}
+    <img src="data:image/png;base64,{{ chart_content }}" class="chart-img" alt="Content">
+  {% else %}
+    <p class="no-data">データがありません</p>
+  {% endif %}
+
+  <!-- ===== 店舗閲覧ランキング ===== -->
+  <div class="section-title">店舗カード閲覧ランキング</div>
+  {% if chart_store_views %}
+    <img src="data:image/png;base64,{{ chart_store_views }}" class="chart-img" alt="Store Views">
+  {% else %}
+    <p class="no-data">閲覧データがまだありません</p>
+  {% endif %}
+
+  <!-- ===== アラート ===== -->
+  <div class="section-title">アラート</div>
+  <div class="alert-grid">
+    <div class="alert-card">
+      <div class="alert-card-title">写真未登録の店舗</div>
+      <div class="alert-card-count">{{ no_photo | length }}件</div>
+      {% if no_photo %}
+      <div class="alert-card-list">{{ no_photo | map(attribute='object_name') | join('、') }}</div>
+      {% endif %}
+    </div>
+    <div class="alert-card">
+      <div class="alert-card-title">位置情報未登録の店舗</div>
+      <div class="alert-card-count">{{ no_location | length }}件</div>
+      {% if no_location %}
+      <div class="alert-card-list">{{ no_location | map(attribute='object_name') | join('、') }}</div>
+      {% endif %}
+    </div>
+    <div class="alert-card">
+      <div class="alert-card-title">口コミ未投稿の店舗</div>
+      <div class="alert-card-count">{{ no_review_objects | length }}件</div>
+      {% if no_review_objects %}
+      <div class="alert-card-list">{{ no_review_objects | map(attribute='object_name') | join('、') }}</div>
+      {% endif %}
+    </div>
+    <div class="alert-card">
+      <div class="alert-card-title">評価3件未満の店舗</div>
+      <div class="alert-card-count">{{ few_ratings | length }}件</div>
+      {% if few_ratings %}
+      <div class="alert-card-list">{% for s in few_ratings %}{{ s.object_name }}({{ s.cnt }}件){% if not loop.last %}、{% endif %}{% endfor %}</div>
+      {% endif %}
+    </div>
+    <div class="alert-card critical">
+      <div class="alert-card-title">14日以上未ログインのユーザー</div>
+      <div class="alert-card-count">{{ inactive_users | length }}人</div>
+      {% if inactive_users %}
+      <div class="alert-card-list">{% for u in inactive_users %}{{ u.username }}({{ u.last_login }}){% if u.status == 'inactive' %}<span style="color:#c62828;font-weight:bold;">[削除予定]</span>{% endif %}{% if not loop.last %}、{% endif %}{% endfor %}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ===== 運営状況 ===== -->
+  <div class="section-title">運営状況</div>
+  <div class="ops-card">
+    <div class="ops-title">店舗追加リクエスト</div>
+    <div class="ops-stat">
+      <div class="ops-stat-item">
+        <div class="ops-stat-num">{{ pending_count }}</div>
+        <div class="ops-stat-label">承認待ち</div>
+      </div>
+      <div class="ops-stat-item">
+        <div class="ops-stat-num">{{ pending_avg_days }}日</div>
+        <div class="ops-stat-label">平均待機日数</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ops-card">
+    <div class="ops-title">通報された口コミ（{{ reported_reviews | length }}件）</div>
+    {% if reported_reviews %}
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th>日付</th>
+          <th>通報者</th>
+          <th>投稿者</th>
+          <th>コメント</th>
+          <th>理由</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rr in reported_reviews %}
+        <tr>
+          <td style="white-space:nowrap;">{{ rr.created_at }}</td>
+          <td>{{ rr.reporter }}</td>
+          <td>{{ rr.author }}</td>
+          <td style="max-width:200px;word-break:break-word;">{{ rr.comment }}</td>
+          <td style="max-width:120px;word-break:break-word;">{{ rr.reason or '-' }}</td>
+          <td style="white-space:nowrap;">
+            <form method="post" action="/admin/delete_review" style="display:inline;margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="review_id" value="{{ rr.review_id }}">
+              <button type="submit" class="btn-del-sm" onclick="return confirm('削除しますか？')">削除</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:#888;font-size:13px;">通報された口コミはありません。</p>
+    {% endif %}
+  </div>
+</div>
+</body>
+</html>

@@ -725,7 +725,7 @@ async def store_detail_page(request: Request, object_id: str):
         comments = conn.execute(
             "SELECT rv.review_id, rv.user_id, rv.comment, rv.created_at, u.username "
             "FROM reviews rv JOIN users u ON rv.user_id = u.user_id "
-            "WHERE rv.object_id = ? ORDER BY rv.created_at DESC",
+            "WHERE rv.object_id = ? AND rv.deleted_at IS NULL ORDER BY rv.created_at DESC",
             (int(object_id),)
         ).fetchall()
 
@@ -781,7 +781,7 @@ async def show_post_review_page(request: Request, object_id: str = ""):
         existing_comment = ""
         if object_id:
             row = conn.execute(
-                "SELECT comment FROM reviews WHERE user_id = ? AND object_id = ?",
+                "SELECT comment FROM reviews WHERE user_id = ? AND object_id = ? AND deleted_at IS NULL",
                 (int(user_id), int(object_id))
             ).fetchone()
             if row:
@@ -816,7 +816,7 @@ async def submit_review(request: Request, object_id: str = Form(...), comment: s
         now = datetime.datetime.now().isoformat()
         with get_db() as conn:
             existing = conn.execute(
-                "SELECT review_id FROM reviews WHERE user_id = ? AND object_id = ?",
+                "SELECT review_id FROM reviews WHERE user_id = ? AND object_id = ? AND deleted_at IS NULL",
                 (int(user_id), int(object_id))
             ).fetchone()
             if existing:
@@ -848,7 +848,7 @@ async def show_edit_review_page(request: Request, review_id: int):
         review = conn.execute(
             "SELECT rv.review_id, rv.user_id, rv.object_id, rv.comment, o.object_name "
             "FROM reviews rv JOIN objects o ON rv.object_id = o.object_id "
-            "WHERE rv.review_id = ?",
+            "WHERE rv.review_id = ? AND rv.deleted_at IS NULL",
             (review_id,)
         ).fetchone()
 
@@ -907,7 +907,10 @@ async def delete_review(request: Request, review_id: int = Form(...)):
         if review is None or str(review["user_id"]) != str(user_id):
             return RedirectResponse(url="/recommendations", status_code=303)
 
-        conn.execute("DELETE FROM reviews WHERE review_id = ?", (review_id,))
+        conn.execute(
+            "UPDATE reviews SET deleted_at = ?, deleted_by = 'user' WHERE review_id = ?",
+            (datetime.datetime.now().isoformat(), review_id)
+        )
         object_id = review["object_id"]
 
     return RedirectResponse(url=f"/store/{object_id}", status_code=303)
@@ -1868,7 +1871,7 @@ async def admin_users_page(request: Request, sort: str = "id_asc", page: int = 1
             f"MAX(ll.logged_in_at) as last_login, "
             f"COUNT(DISTINCT ll.log_id) as login_count, "
             f"(SELECT COUNT(*) FROM ratings r WHERE r.user_id = u.user_id) as rating_count, "
-            f"(SELECT COUNT(*) FROM reviews rv WHERE rv.user_id = u.user_id) as review_count "
+            f"(SELECT COUNT(*) FROM reviews rv WHERE rv.user_id = u.user_id AND rv.deleted_at IS NULL) as review_count "
             f"FROM users u LEFT JOIN login_logs ll ON u.user_id = ll.user_id "
             f"GROUP BY u.user_id "
             f"ORDER BY {order_clause} "
@@ -1955,12 +1958,13 @@ async def admin_comments_page(request: Request, sort: str = "date_desc", page: i
     offset = (page - 1) * _ADMIN_PAGE_SIZE
 
     with get_db() as conn:
-        total_count = conn.execute("SELECT COUNT(*) as cnt FROM reviews").fetchone()["cnt"]
+        total_count = conn.execute("SELECT COUNT(*) as cnt FROM reviews WHERE deleted_at IS NULL").fetchone()["cnt"]
         rows = conn.execute(
             f"SELECT rv.review_id, u.username, o.object_name, rv.comment, rv.created_at "
             f"FROM reviews rv "
             f"JOIN users u ON rv.user_id = u.user_id "
             f"JOIN objects o ON rv.object_id = o.object_id "
+            f"WHERE rv.deleted_at IS NULL "
             f"ORDER BY {order_clause} "
             f"LIMIT {_ADMIN_PAGE_SIZE} OFFSET {offset}"
         ).fetchall()
@@ -2084,7 +2088,7 @@ async def admin_dashboard(request: Request, period: str = "30"):
 
         daily_reviews = conn.execute(
             "SELECT DATE(created_at) as day, COUNT(*) as cnt FROM reviews "
-            "WHERE DATE(created_at) >= ? GROUP BY day ORDER BY day",
+            "WHERE deleted_at IS NULL AND DATE(created_at) >= ? GROUP BY day ORDER BY day",
             (since_date,)
         ).fetchall()
 
@@ -2110,7 +2114,7 @@ async def admin_dashboard(request: Request, period: str = "30"):
 
         no_review_objects = conn.execute(
             "SELECT o.object_id, o.object_name FROM objects o "
-            "LEFT JOIN reviews r ON o.object_id = r.object_id "
+            "LEFT JOIN reviews r ON o.object_id = r.object_id AND r.deleted_at IS NULL "
             "WHERE r.review_id IS NULL ORDER BY o.object_id"
         ).fetchall()
 
@@ -2286,8 +2290,11 @@ async def admin_dismiss_all_reports(review_id: int = Form(...)):
 
 @app.post("/admin/delete_review")
 async def admin_delete_review(review_id: int = Form(...)):
-    """管理者による口コミ削除（関連する通報も削除）"""
+    """管理者による口コミ削除（論理削除＋関連通報を削除）"""
     with get_db() as conn:
         conn.execute("DELETE FROM review_reports WHERE review_id = ?", (review_id,))
-        conn.execute("DELETE FROM reviews WHERE review_id = ?", (review_id,))
+        conn.execute(
+            "UPDATE reviews SET deleted_at = ?, deleted_by = 'admin' WHERE review_id = ?",
+            (datetime.datetime.now().isoformat(), review_id)
+        )
     return RedirectResponse(url="/admin/comments", status_code=303)

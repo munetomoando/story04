@@ -110,6 +110,8 @@ def init_db():
         ("objects", "genre", "TEXT"),
         ("users", "status", "TEXT DEFAULT 'active'"),
         ("users", "group_code", "TEXT"),
+        ("reviews", "deleted_at", "TEXT"),
+        ("reviews", "deleted_by", "TEXT"),
     ]
     for table, col, col_type in migrations:
         try:

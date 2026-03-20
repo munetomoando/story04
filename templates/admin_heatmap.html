@@ -5,7 +5,12 @@
   <title>ユーザー類似度ヒートマップ</title>
   <link rel="stylesheet" href="/static/style.css?v=20260320">
   <style>
-    body { padding: 20px; background: #f4f6f8; font-family: Arial, sans-serif; }
+    body { padding: 0; background: #f4f6f8; font-family: Arial, sans-serif; }
+    .admin-nav-bar { background: #e8f0e8; border-bottom: 1px solid #c8dcc8; }
+    .admin-nav { max-width: 1100px; margin: 0 auto; padding: 12px 16px; font-size: 13px; }
+    .admin-nav a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
+    .admin-nav a:hover { text-decoration: underline; }
+    .admin-nav .nav-current { color: #bbb; margin-right: 16px; cursor: default; }
     img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
     .cluster-wrap { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 8px; }
     .cluster-box { background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); overflow: hidden; }
@@ -18,17 +23,17 @@
   </style>
 </head>
 <body>
-  <div style="max-width:1100px;margin:0 auto;padding:16px 16px 0;font-size:13px;">
-    <a href="/admin/dashboard" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ダッシュボード</a>
-    <a href="/admin/objects" style="color:#2e7d32;text-decoration:none;margin-right:16px;">店舗管理</a>
-    <a href="/admin/users" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ユーザー管理</a>
-    <a href="/admin/comments" style="color:#2e7d32;text-decoration:none;margin-right:16px;">口コミ管理</a>
-    <a href="/admin/groups" style="color:#2e7d32;text-decoration:none;margin-right:16px;">グループ管理</a>
-    <a href="/admin/genres" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ジャンル管理</a>
-    <a href="/admin/reviews" style="color:#2e7d32;text-decoration:none;margin-right:16px;">推薦分析</a>
-    <span style="color:#bbb;">ユーザー分析</span>
-    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
-  </div>
+<div class="admin-nav-bar"><div class="admin-nav">
+  <a href="/admin/dashboard">ダッシュボード</a>
+  <a href="/admin/objects">店舗管理</a>
+  <a href="/admin/users">ユーザー管理</a>
+  <a href="/admin/comments">口コミ管理</a>
+  <a href="/admin/groups">グループ管理</a>
+  <a href="/admin/genres">ジャンル管理</a>
+  <a href="/admin/reviews">推薦分析</a>
+  <span class="nav-current">ユーザー分析</span>
+  <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+</div></div>
   <h1>ユーザー類似度ヒートマップ</h1>
 
   <form method="get" action="/admin/heatmap" style="margin:12px 0 20px; padding:12px 16px; background:white; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.1);">

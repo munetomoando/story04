@@ -5,6 +5,12 @@
   <title>推薦分析 — 管理者</title>
   <link rel="stylesheet" href="/static/style.css?v=20260320">
   <style>
+    body { background: #f4f6f8; }
+    .admin-nav-bar { background: #e8f0e8; border-bottom: 1px solid #c8dcc8; }
+    .admin-nav { max-width: 1100px; margin: 0 auto; padding: 12px 16px; font-size: 13px; }
+    .admin-nav a { color: #2e7d32; text-decoration: none; margin-right: 16px; }
+    .admin-nav a:hover { text-decoration: underline; }
+    .admin-nav .nav-current { color: #bbb; margin-right: 16px; cursor: default; }
     /* テーブル全体のスタイル */
     table {
         width: 100%;
@@ -106,18 +112,18 @@
 </style>
 </head>
 <body>
+<div class="admin-nav-bar"><div class="admin-nav">
+  <a href="/admin/dashboard">ダッシュボード</a>
+  <a href="/admin/objects">店舗管理</a>
+  <a href="/admin/users">ユーザー管理</a>
+  <a href="/admin/comments">口コミ管理</a>
+  <a href="/admin/groups">グループ管理</a>
+  <a href="/admin/genres">ジャンル管理</a>
+  <span class="nav-current">推薦分析</span>
+  <a href="/admin/heatmap">ユーザー分析</a>
+  <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
+</div></div>
   <h1>推薦分析</h1>
-  <div style="max-width:1100px;margin:0 auto;padding:16px 16px 0;font-size:13px;">
-    <a href="/admin/dashboard" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ダッシュボード</a>
-    <a href="/admin/objects" style="color:#2e7d32;text-decoration:none;margin-right:16px;">店舗管理</a>
-    <a href="/admin/users" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ユーザー管理</a>
-    <a href="/admin/comments" style="color:#2e7d32;text-decoration:none;margin-right:16px;">口コミ管理</a>
-    <a href="/admin/groups" style="color:#2e7d32;text-decoration:none;margin-right:16px;">グループ管理</a>
-    <a href="/admin/genres" style="color:#2e7d32;text-decoration:none;margin-right:16px;">ジャンル管理</a>
-    <span style="color:#bbb;margin-right:16px;">推薦分析</span>
-    <a href="/admin/heatmap" style="color:#2e7d32;text-decoration:none;">ユーザー分析</a>
-    <form method="post" action="/admin/logout" style="display:inline;margin-left:16px;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="background:none;border:1px solid #c62828;color:#c62828;padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;">ログアウト</button></form>
-  </div>
 
   <h2>ユーザー × 評価対象 評価一覧</h2>
 

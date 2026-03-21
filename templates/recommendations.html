@@ -51,19 +51,19 @@
                     <div class="flex-1">
                         <div class="font-bold text-ink">{{ rec.object_name }}</div>
                         {% if rec.reason %}
-                        <div class="text-xs text-ink/40 mt-1 leading-relaxed">
+                        <div class="text-xs text-ink/70 mt-1 leading-relaxed">
                             {{ rec.reason }}
-                            {% if rec.sub_reason %}<br><span class="text-ink/30">{{ rec.sub_reason }}</span>{% endif %}
+                            {% if rec.sub_reason %}<br><span class="text-ink/50">{{ rec.sub_reason }}</span>{% endif %}
                         </div>
                         {% endif %}
                     </div>
                     <div class="text-right flex-shrink-0">
-                        <div class="text-lg text-golden">
+                        <div class="text-lg text-amber-400">
                             {% if rec.recommendation_score >= 0.75 %}★★★
                             {% elif rec.recommendation_score >= 0.5 %}★★
                             {% else %}★{% endif %}
                         </div>
-                        <div class="text-[11px] text-ink/30">スコア: {{ rec.recommendation_score }}</div>
+                        <div class="text-[11px] text-ink/50">スコア: {{ rec.recommendation_score }}</div>
                     </div>
                 </div>
             </a>
@@ -87,7 +87,7 @@
             <a href="/store/{{ obj.object_id }}" class="flex items-center px-4 py-3 gap-3 border-b border-cream last:border-0 hover:bg-cream/50 transition-colors">
                 <span class="w-6 h-6 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{{ loop.index }}</span>
                 <span class="flex-1 font-bold text-ink text-sm">{{ obj.object_name }}</span>
-                <span class="text-xs text-ink/40">平均 {{ obj.mean }} ({{ obj.count }}件)</span>
+                <span class="text-xs text-ink/60">平均 {{ obj.mean }} ({{ obj.count }}件)</span>
             </a>
             {% endfor %}
         </div>

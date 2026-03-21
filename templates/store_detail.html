@@ -95,14 +95,14 @@
         <div class="bg-white rounded-2xl shadow-lg p-4">
             {% for d in rating_distribution %}
             <div class="flex items-center gap-2 mb-1.5 last:mb-0">
-                <span class="text-xs text-golden w-[70px] text-right flex-shrink-0">{{ "★" * d.stars }}{{ "☆" * (5 - d.stars) }}</span>
-                <div class="flex-1 h-4 bg-golden/20 rounded-full overflow-hidden">
-                    <div class="h-full bg-golden rounded-full transition-all duration-300" style="width: {{ (d.count / total_ratings * 100) | round(1) }}%"></div>
+                <span class="text-xs text-amber-500 w-[70px] text-right flex-shrink-0">{{ "★" * d.stars }}{{ "☆" * (5 - d.stars) }}</span>
+                <div class="flex-1 h-4 bg-amber-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-amber-400 rounded-full transition-all duration-300" style="width: {{ (d.count / total_ratings * 100) | round(1) }}%"></div>
                 </div>
                 <span class="text-xs text-ink/50 w-8 text-right flex-shrink-0">{{ d.count }}人</span>
             </div>
             {% endfor %}
-            <div class="text-center text-xs text-ink/40 mt-2">{{ total_ratings }}人が評価</div>
+            <div class="text-center text-xs text-ink/50 mt-2">{{ total_ratings }}人が評価</div>
         </div>
         {% else %}
         <div class="bg-white rounded-2xl shadow-lg p-4">

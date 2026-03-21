@@ -238,7 +238,7 @@ function buildCard(obj, anim) {
         <div class="bg-white rounded-2xl p-6 shadow-lg ${anim || 'animate-slide-in'}" id="card-${obj.id}">
             ${imgHtml}
             <div class="text-xl font-bold text-ink text-center mb-5 leading-tight">${obj.name}</div>
-            <div class="flex justify-between text-[11px] text-ink/30 px-1 mb-1"><span>低い</span><span>高い</span></div>
+            <div class="flex justify-between text-[11px] text-ink/50 px-1 mb-1"><span>低い</span><span>高い</span></div>
             <div class="flex justify-center gap-2.5">
                 ${[1,2,3,4,5].map(v => `
                 <button class="w-12 h-12 rounded-xl font-bold text-lg transition-all active:scale-90
@@ -355,7 +355,7 @@ function renderRatedListIn(containerId, formId) {
         <div class="flex items-center justify-between py-3 border-b border-cream-dark gap-2">
             <span class="text-sm font-bold text-ink flex-1 text-left">${obj.name}</span>
             <div>
-                <div class="flex justify-between text-[10px] text-ink/30 px-0.5 mb-0.5"><span>低い</span><span>高い</span></div>
+                <div class="flex justify-between text-[10px] text-ink/50 px-0.5 mb-0.5"><span>低い</span><span>高い</span></div>
                 <div class="flex gap-1 items-center" data-obj-id="${obj.id}">
                     ${[1,2,3,4,5].map(v => `
                     <button type="button"

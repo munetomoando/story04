@@ -54,7 +54,7 @@
     <div class="card bg-white shadow-sm mb-4">
         <div class="card-body p-5">
             <h2 class="text-base font-bold text-brand border-l-4 border-brand pl-3 mb-3">おすすめの仕組み</h2>
-            <p class="text-sm text-ink/80 leading-relaxed mb-4">おすすめは<strong>「協調フィルタリング」</strong>という技術で決まっています。あなたの評価傾向を分析し、好みが似ている他のユーザーの評価をもとに、あなたがまだ評価していないお店の中からおすすめを提案します。</p>
+            <p class="text-sm text-ink/80 leading-relaxed mb-4">おすすめは<strong>「協調フィルタリング」</strong>と<strong>「ジャンル嗜好分析」</strong>を組み合わせて決まっています。あなたの評価傾向とジャンルの好みを分析し、好みが似ている他のユーザーの評価をもとに、あなたがまだ評価していないお店の中からおすすめを提案します。</p>
 
             <h3 class="text-sm font-bold text-ink mb-3">おすすめが決まるまでの流れ</h3>
 
@@ -70,7 +70,7 @@
                 <div class="flex-shrink-0 w-7 h-7 rounded-full bg-brand text-white text-sm font-bold flex items-center justify-center">2</div>
                 <div class="flex-1 text-sm text-ink/70 leading-relaxed pt-0.5">
                     <strong>好みの近さを測る</strong><br>
-                    補正後の評価パターンを使って、全ユーザー間の「好みの近さ（類似度）」を計算します。同じお店を同じように高く（または低く）評価しているユーザー同士は類似度が高くなります。
+                    全ユーザー間の「好みの近さ（類似度）」を2つの観点から計算します。<strong>①お店ごとの評価パターン</strong>（同じお店を同じように評価しているか）と、<strong>②ジャンルの好み</strong>（ラーメン・和食・カレーなど、同じジャンルを好む傾向があるか）を組み合わせて総合的な類似度を算出します。共通のお店を評価していなくても、ジャンルの好みが近ければ類似ユーザーとして判定されます。
                 </div>
             </div>
 
@@ -86,16 +86,17 @@
                 <div class="flex-shrink-0 w-7 h-7 rounded-full bg-brand text-white text-sm font-bold flex items-center justify-center">4</div>
                 <div class="flex-1 text-sm text-ink/70 leading-relaxed pt-0.5">
                     <strong>おすすめスコアを計算</strong><br>
-                    あなたが未評価の各お店について、好みが近いユーザーの評価を「類似度で重みづけした平均」として算出します。より好みが近い人の評価ほど強く反映されます。
+                    あなたが未評価の各お店について、好みが近いユーザーの評価を「類似度で重みづけした平均」として算出します。さらに、そのお店のジャンルがあなたの好みに合っている場合はスコアが上乗せされます。例えば、あなたがラーメン店を普段高く評価していれば、未評価のラーメン店のスコアが高くなります。
                 </div>
             </div>
 
             <div class="bg-cream rounded-lg border border-gray-200 p-4 mb-4 text-center">
                 <div class="font-mono text-sm font-bold text-brand">
-                    おすすめスコア = Σ(類似度 × 補正済み評価) ÷ Σ(類似度)
+                    おすすめスコア = Σ(類似度 × 補正済み評価) ÷ Σ(類似度) × ジャンル補正
                 </div>
                 <div class="mt-1 text-xs text-ink/40">
-                    ※ 好みが近いユーザーのうち、そのお店を評価済みのユーザーのみで計算
+                    ※ 好みが近いユーザーのうち、そのお店を評価済みのユーザーのみで計算<br>
+                    ※ ジャンル補正：あなたが好むジャンルのお店ほどスコアが高くなります
                 </div>
             </div>
 
@@ -116,6 +117,7 @@
             <h3 class="text-sm font-bold text-ink mb-2">おすすめの精度を上げるには</h3>
             <ul class="text-sm text-ink/70 leading-relaxed space-y-1 list-disc pl-5">
                 <li>できるだけ多くのお店を評価すると、あなたの好みをより正確に分析できます。</li>
+                <li>さまざまなジャンルのお店を評価すると、ジャンル嗜好の分析精度が上がります。</li>
                 <li>他のユーザーの参加が増えると、類似ユーザーが見つかりやすくなり精度が向上します。</li>
                 <li>知らないお店はスキップして構いません。無理に評価すると精度が下がることがあります。</li>
             </ul>

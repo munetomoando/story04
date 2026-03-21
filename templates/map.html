@@ -68,7 +68,6 @@
             color: white;
             border-color: #E07A5F;
         }
-        #genre-filter::-webkit-scrollbar { display: none; }
 
         .bubble-marker { position: relative; }
 
@@ -170,11 +169,10 @@
 </div>
 
 <div id="genre-filter" style="position:fixed;top:56px;left:0;right:0;z-index:10;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);
-    border-bottom:1px solid rgba(0,0,0,0.06);padding:6px 10px;display:flex;gap:6px;overflow-x:auto;
-    -webkit-overflow-scrolling:touch;scrollbar-width:none;">
+    border-bottom:1px solid rgba(0,0,0,0.06);padding:6px 10px;display:flex;gap:6px;flex-wrap:wrap;">
     <button class="genre-btn active" data-genre="all" onclick="filterGenre('all',this)">すべて</button>
 </div>
-<div id="map" style="top:92px !important;"></div>
+<div id="map"></div>
 <div id="empty-msg" class="map-empty-msg" style="display:none;">
     まだ店舗の位置情報が登録されていません。
 </div>
@@ -357,6 +355,14 @@ function openStore(idx) {
 
 let currentGenre = 'all';
 
+function adjustMapTop() {
+    const filter = document.getElementById('genre-filter');
+    const top = filter.offsetTop + filter.offsetHeight;
+    document.getElementById('map').style.top = top + 'px';
+    const emptyMsg = document.getElementById('empty-msg');
+    if (emptyMsg) emptyMsg.style.top = top + 'px';
+}
+
 function buildGenreButtons(data) {
     const genres = [...new Set(data.map(o => o.genre).filter(g => g))].sort();
     const container = document.getElementById('genre-filter');
@@ -368,7 +374,9 @@ function buildGenreButtons(data) {
         btn.onclick = () => filterGenre(g, btn);
         container.appendChild(btn);
     });
+    adjustMapTop();
 }
+window.addEventListener('resize', adjustMapTop);
 
 function filterGenre(genre, btn) {
     currentGenre = genre;

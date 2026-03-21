@@ -137,7 +137,10 @@
                     </form>
                 </div>
                 {% else %}
-                <div class="flex gap-2 mt-3">
+                <div class="flex gap-2 mt-3 items-center">
+                    <button type="button" class="btn btn-ghost btn-xs {% if c.liked_by_me %}text-blue-500{% else %}text-ink/30{% endif %} hover:text-blue-500"
+                            id="like-btn-{{ c.review_id }}"
+                            onclick="toggleLike({{ c.review_id }})">👍 <span id="like-count-{{ c.review_id }}">{{ c.like_count if c.like_count else '' }}</span></button>
                     <button type="button" class="btn btn-ghost btn-xs text-ink/30 hover:text-ink/50"
                             onclick="openReportModal({{ c.review_id }})">通報</button>
                 </div>
@@ -206,6 +209,21 @@ L.marker([lat, lng]).addTo(map);
 </div>
 
 <script>
+async function toggleLike(reviewId) {
+    const btn = document.getElementById('like-btn-' + reviewId);
+    const countEl = document.getElementById('like-count-' + reviewId);
+    try {
+        const formData = new FormData();
+        formData.append('review_id', reviewId);
+        formData.append('csrf_token', '{{ csrf_token }}');
+        const res = await fetch('/like_review', { method: 'POST', body: formData });
+        if (!res.ok) return;
+        const data = await res.json();
+        countEl.textContent = data.count || '';
+        btn.className = btn.className.replace(/text-blue-500|text-ink\/30/g, '');
+        btn.classList.add(data.liked ? 'text-blue-500' : 'text-ink/30');
+    } catch(e) { /* ignore */ }
+}
 function openReportModal(reviewId) {
     document.getElementById('report-review-id').value = reviewId;
     document.getElementById('report-modal').classList.add('open');

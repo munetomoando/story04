@@ -85,6 +85,12 @@ def init_db():
             object_id  INTEGER NOT NULL,
             viewed_at  TEXT    NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS review_likes (
+            review_id  INTEGER NOT NULL,
+            user_id    INTEGER NOT NULL,
+            created_at TEXT    NOT NULL,
+            PRIMARY KEY (review_id, user_id)
+        );
         CREATE TABLE IF NOT EXISTS review_reports (
             report_id  INTEGER PRIMARY KEY AUTOINCREMENT,
             review_id  INTEGER NOT NULL,

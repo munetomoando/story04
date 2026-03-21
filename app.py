@@ -960,6 +960,24 @@ async def store_detail_page(request: Request, object_id: str):
             (int(object_id),)
         ).fetchall()
 
+        # いいね数と自分がいいね済みかを取得
+        current_user_id = str(request.session.get("user_id"))
+        review_ids = [c["review_id"] for c in comments]
+        like_counts: dict[int, int] = {}
+        my_likes: set[int] = set()
+        if review_ids:
+            placeholders = ",".join("?" * len(review_ids))
+            like_rows = conn.execute(
+                f"SELECT review_id, COUNT(*) as cnt FROM review_likes WHERE review_id IN ({placeholders}) GROUP BY review_id",
+                review_ids
+            ).fetchall()
+            like_counts = {r["review_id"]: r["cnt"] for r in like_rows}
+            my_like_rows = conn.execute(
+                f"SELECT review_id FROM review_likes WHERE review_id IN ({placeholders}) AND user_id = ?",
+                review_ids + [int(current_user_id)]
+            ).fetchall()
+            my_likes = {r["review_id"] for r in my_like_rows}
+
     image_map = get_store_image_map()
     store = {
         "object_id": str(obj["object_id"]),
@@ -973,13 +991,14 @@ async def store_detail_page(request: Request, object_id: str):
     dist = {r["rating"]: r["cnt"] for r in rating_rows}
     rating_distribution = [{"stars": s, "count": dist.get(s, 0)} for s in range(5, 0, -1)]
 
-    current_user_id = str(request.session.get("user_id"))
     comment_list = [
         {
             "review_id": c["review_id"],
             "comment": c["comment"],
             "created_at": c["created_at"][:10],
             "is_mine": str(c["user_id"]) == current_user_id,
+            "like_count": like_counts.get(c["review_id"], 0),
+            "liked_by_me": c["review_id"] in my_likes,
         }
         for c in comments
     ]
@@ -1024,6 +1043,22 @@ async def show_post_review_page(request: Request, object_id: str = ""):
             if row:
                 existing_comment = row["comment"]
 
+        # 自分の口コミが受け取ったいいね数を取得
+        my_reviews_likes = conn.execute(
+            "SELECT rv.review_id, o.object_name, rv.comment, COUNT(rl.user_id) as like_count"
+            " FROM reviews rv"
+            " JOIN objects o ON rv.object_id = o.object_id"
+            " LEFT JOIN review_likes rl ON rv.review_id = rl.review_id"
+            " WHERE rv.user_id = ? AND rv.deleted_at IS NULL"
+            " GROUP BY rv.review_id"
+            " ORDER BY like_count DESC, rv.created_at DESC",
+            (int(user_id),)
+        ).fetchall()
+        my_reviews_with_likes = [
+            {"object_name": r["object_name"], "comment": r["comment"][:50], "like_count": r["like_count"]}
+            for r in my_reviews_likes
+        ]
+
     # 未投稿をジャンル別にグループ化、投稿済みは別グループ
     unreviewd_by_genre: dict[str, list] = {}
     reviewed_list: list[dict] = []
@@ -1043,7 +1078,44 @@ async def show_post_review_page(request: Request, object_id: str = ""):
         "reviewed_list": reviewed_list,
         "selected_object_id": object_id,
         "existing_comment": existing_comment,
+        "my_reviews_with_likes": my_reviews_with_likes,
     })
+
+
+@app.post("/like_review")
+@limiter.limit("30/minute")
+async def like_review(request: Request, review_id: int = Form(...)):
+    """口コミにいいねをトグル"""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JSONResponse(content={"error": "unauthorized"}, status_code=401)
+
+    with get_db() as conn:
+        # 自分の口コミにはいいねできない
+        review = conn.execute(
+            "SELECT user_id, object_id FROM reviews WHERE review_id = ? AND deleted_at IS NULL",
+            (review_id,)
+        ).fetchone()
+        if not review or review["user_id"] == int(user_id):
+            return JSONResponse(content={"error": "invalid"}, status_code=400)
+
+        existing = conn.execute(
+            "SELECT 1 FROM review_likes WHERE review_id = ? AND user_id = ?",
+            (review_id, int(user_id))
+        ).fetchone()
+        if existing:
+            conn.execute("DELETE FROM review_likes WHERE review_id = ? AND user_id = ?", (review_id, int(user_id)))
+            liked = False
+        else:
+            conn.execute(
+                "INSERT INTO review_likes (review_id, user_id, created_at) VALUES (?, ?, ?)",
+                (review_id, int(user_id), datetime.datetime.now().isoformat())
+            )
+            liked = True
+
+        cnt = conn.execute("SELECT COUNT(*) as c FROM review_likes WHERE review_id = ?", (review_id,)).fetchone()["c"]
+
+    return JSONResponse(content={"liked": liked, "count": cnt})
 
 
 @app.post("/post_review")

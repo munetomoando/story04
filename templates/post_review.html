@@ -84,6 +84,25 @@
             </form>
         </div>
     </div>
+
+    {% if my_reviews_with_likes %}
+    <div class="card bg-white shadow-sm mt-4">
+        <div class="card-body p-6">
+            <h2 class="text-base font-bold text-ink mb-3">あなたの口コミへの👍</h2>
+            <ul class="space-y-2">
+                {% for rv in my_reviews_with_likes %}
+                <li class="flex justify-between items-center text-sm border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                    <div class="flex-1 min-w-0 mr-3">
+                        <span class="font-bold text-ink/70">{{ rv.object_name }}</span>
+                        <span class="text-ink/40 text-xs block truncate">{{ rv.comment }}</span>
+                    </div>
+                    <span class="{% if rv.like_count > 0 %}text-blue-500 font-bold{% else %}text-ink/30{% endif %} text-sm whitespace-nowrap">👍 {{ rv.like_count }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
 </main>
 
 <div class="btm-nav btm-nav-sm bg-white border-t border-gray-200 z-50">

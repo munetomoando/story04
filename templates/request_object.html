@@ -1,55 +1,70 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>店舗追加リクエスト</title>
-    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = { theme: { extend: { colors: {
+      brand: '#E07A5F', 'brand-dark': '#C85A42', sage: '#81B29A', 'sage-dark': '#5E9B80',
+      golden: '#F2CC8F', ink: '#3D405B', cream: '#FAF8F0',
+    }}}}
+    </script>
 </head>
-<body class="app-page">
+<body class="bg-cream min-h-screen pb-20">
 
-<header class="app-header">
-    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">{{ app_name }}</a>
-    <span class="header-user" onclick="this.querySelector('.header-user-menu').classList.toggle('open')">
-        {{ username }} ▾
-        <div class="header-user-menu" id="user-menu">
-            <a class="header-user-menu-item" href="/help" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">ヘルプ</a>
-            <a class="header-user-menu-item" href="/export_my_data" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">マイデータ</a>
-            <a class="header-user-menu-item" href="/change_password" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">パスワード変更</a>
-            <button class="header-user-menu-item" style="color:#1565c0;" onclick="event.stopPropagation();document.getElementById('group-code-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">グループコード</button>
-            <button class="header-user-menu-item" onclick="event.stopPropagation();document.getElementById('logout-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">ログアウト</button>
-        </div>
-    </span>
-</header>
+<div class="navbar bg-white/80 backdrop-blur-md shadow-sm fixed top-0 left-0 right-0 z-50 h-14 min-h-0 px-4">
+  <div class="flex-1"><a href="/rating" class="font-bold text-ink text-lg tracking-tight">{{ app_name }}</a></div>
+  <div class="dropdown dropdown-end">
+    <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-1 text-ink/60">
+      <span class="text-sm">{{ username }}</span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </div>
+    <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-xl z-[200] w-48 p-2 shadow-xl border border-gray-100 mt-1">
+      <li><a href="/help" class="text-sage-dark font-medium">ヘルプ</a></li>
+      <li><a href="/export_my_data" class="text-sage-dark font-medium">マイデータ</a></li>
+      <li><a href="/change_password" class="text-sage-dark font-medium">パスワード変更</a></li>
+      <li><button onclick="this.closest('.dropdown').querySelector('[tabindex]').blur();document.getElementById('group-code-modal').classList.add('open')" class="text-blue-600 font-medium">グループコード</button></li>
+      <li><button onclick="this.closest('.dropdown').querySelector('[tabindex]').blur();document.getElementById('logout-modal').classList.add('open')" class="text-red-500 font-medium">ログアウト</button></li>
+    </ul>
+  </div>
+</div>
 
-<main class="app-main">
-    <div class="page-card">
-        <h1 class="page-title">店舗追加リクエスト</h1>
-        <p class="page-desc">掲載されていない店舗を運営に提案できます。審査後に追加されます。</p>
+<main class="pt-16 px-4 max-w-md mx-auto">
+    <div class="card bg-white shadow-sm">
+        <div class="card-body p-6">
+            <h1 class="text-lg font-bold text-brand mb-1">店舗追加リクエスト</h1>
+            <p class="text-sm text-ink/50 mb-5">掲載されていない店舗を運営に提案できます。審査後に追加されます。</p>
 
-        {% if request.query_params.get('success') %}
-        <div class="alert alert-success">リクエストを送信しました。審査をお待ちください。</div>
-        {% endif %}
+            {% if request.query_params.get('success') %}
+            <div class="alert bg-sage/20 text-sage-dark border-sage/30 text-sm mb-4">リクエストを送信しました。審査をお待ちください。</div>
+            {% endif %}
 
-        {% if error_message is defined and error_message %}
-        <div class="alert alert-error">{{ error_message }}</div>
-        {% endif %}
+            {% if error_message is defined and error_message %}
+            <div class="alert bg-red-50 text-red-700 border-red-200 text-sm mb-4">{{ error_message }}</div>
+            {% endif %}
 
-        <form method="post" action="/request_object" class="request-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <label for="object_name" class="form-label">店舗名</label>
-            <input type="text" id="object_name" name="object_name" placeholder="例: 松屋 神田店"
-                   class="form-input" required maxlength="100">
-            <button type="submit" class="btn-primary">リクエストを送信</button>
-        </form>
+            <form method="post" action="/request_object"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <label for="object_name" class="block text-sm font-bold text-brand mb-1">店舗名</label>
+                <input type="text" id="object_name" name="object_name" placeholder="例: 松屋 神田店"
+                       class="input input-bordered bg-cream/50 focus:outline-none focus:border-brand w-full mb-4" required maxlength="100">
+                <button type="submit" class="btn bg-brand hover:bg-brand-dark text-white border-none w-full">リクエストを送信</button>
+            </form>
 
-        {% if user_requests %}
-        <div class="request-history">
-            <h2 class="section-title">過去のリクエスト</h2>
-            <ul class="request-list">
+            {% if user_requests %}
+            <div class="divider my-5"></div>
+            <h2 class="text-sm font-bold text-ink mb-3">過去のリクエスト</h2>
+            <ul class="space-y-2">
                 {% for req in user_requests %}
-                <li class="request-item">
-                    <span class="request-name">{{ req.object_name }}</span>
-                    <span class="request-status status-{{ req.status }}">
+                <li class="flex items-center justify-between bg-cream/70 rounded-lg px-3 py-2">
+                    <span class="text-sm text-ink">{{ req.object_name }}</span>
+                    <span class="text-xs font-medium px-2 py-0.5 rounded-full
+                        {% if req.status == 'pending' %}bg-golden/40 text-ink/70
+                        {% elif req.status == 'approved' %}bg-sage/30 text-sage-dark
+                        {% else %}bg-red-100 text-red-600
+                        {% endif %}">
                         {% if req.status == 'pending' %}審査中
                         {% elif req.status == 'approved' %}承認済み
                         {% else %}却下
@@ -58,58 +73,42 @@
                 </li>
                 {% endfor %}
             </ul>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 </main>
 
-<nav class="bottom-nav">
-    <a href="/rating" class="nav-item">
-        <span class="nav-icon">⭐</span>
-        <span class="nav-label">評価</span>
-    </a>
-    <a href="/recommendations" class="nav-item">
-        <span class="nav-icon">🍽️</span>
-        <span class="nav-label">おすすめ</span>
-    </a>
-    <a href="/map" class="nav-item">
-        <span class="nav-icon">🗺️</span>
-        <span class="nav-label">マップ</span>
-    </a>
-    <a href="/request_object" class="nav-item nav-active">
-        <span class="nav-icon">➕</span>
-        <span class="nav-label">リクエスト</span>
-    </a>
-</nav>
+<div class="btm-nav btm-nav-sm bg-white/90 backdrop-blur border-t border-gray-200 z-50">
+  <a href="/rating" class="text-ink/40"><span class="text-base">⭐</span><span class="btm-nav-label text-[11px]">評価</span></a>
+  <a href="/recommendations" class="text-ink/40"><span class="text-base">🍽️</span><span class="btm-nav-label text-[11px]">おすすめ</span></a>
+  <a href="/map" class="text-ink/40"><span class="text-base">🗺️</span><span class="btm-nav-label text-[11px]">マップ</span></a>
+  <a href="/request_object" class="active text-brand"><span class="text-base">➕</span><span class="btm-nav-label text-[11px]">リクエスト</span></a>
+</div>
 
-<!-- グループコード入力モーダル -->
-<div class="logout-overlay" id="group-code-modal">
-    <div class="logout-card">
-        <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
-        <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
-        <div id="group-error-msg" style="display:none;background:#ffebee;color:#c62828;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:10px;">このグループコードは存在しません。</div>
+<div class="fixed inset-0 bg-black/40 z-[10000] items-center justify-center hidden" id="group-code-modal">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-72 text-center">
+        <h3 class="text-lg font-bold text-blue-600 mb-2">グループコード</h3>
+        <p class="text-sm text-ink/50 mb-3">所属するグループのコードを入力してください。</p>
         <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <input type="text" name="group_code" placeholder="グループコード"
-                value="{{ current_group_code or '' }}"
-                style="display:block;width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:14px;box-sizing:border-box;">
-            <div class="logout-card-actions">
-                <button type="button" class="btn-logout-cancel" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
-                <button type="submit" class="btn-logout-confirm" style="background:#1565c0;">保存</button>
+            <input type="text" name="group_code" placeholder="グループコード" value="{{ current_group_code or '' }}" class="input input-bordered w-full mb-3 text-base" />
+            <div class="flex gap-2">
+                <button type="button" class="btn btn-ghost flex-1" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
+                <button type="submit" class="btn bg-blue-600 hover:bg-blue-700 text-white border-none flex-1">保存</button>
             </div>
         </form>
     </div>
 </div>
-<!-- ログアウト確認モーダル -->
-<div class="logout-overlay" id="logout-modal">
-    <div class="logout-card">
-        <div class="logout-card-title">ログアウト</div>
-        <div class="logout-card-msg">ログアウトしますか？</div>
-        <div class="logout-card-actions">
-            <button class="btn-logout-cancel" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
-            <form method="post" action="/logout" style="display:inline;margin:0;flex:1;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-logout-confirm" style="width:100%;">ログアウト</button></form>
+<div class="fixed inset-0 bg-black/40 z-[10000] items-center justify-center hidden" id="logout-modal">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-72 text-center">
+        <h3 class="text-lg font-bold text-ink mb-2">ログアウト</h3>
+        <p class="text-sm text-ink/50 mb-5">ログアウトしますか？</p>
+        <div class="flex gap-2">
+            <button class="btn btn-ghost flex-1" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
+            <form method="post" action="/logout" class="flex-1"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn bg-red-500 hover:bg-red-600 text-white border-none w-full">ログアウト</button></form>
         </div>
     </div>
 </div>
+<style>#group-code-modal.open, #logout-modal.open { display: flex !important; }</style>
 <script>if(new URLSearchParams(location.search).has('group_error')){document.getElementById('group-code-modal').classList.add('open');document.getElementById('group-error-msg').style.display='block';}</script>
 </body>
 </html>

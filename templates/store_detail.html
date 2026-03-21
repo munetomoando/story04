@@ -1,222 +1,29 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ store.object_name }} — {{ app_name }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = { theme: { extend: { colors: {
+      brand: '#E07A5F', 'brand-dark': '#C85A42', sage: '#81B29A', 'sage-dark': '#5E9B80',
+      golden: '#F2CC8F', ink: '#3D405B', cream: '#FAF8F0',
+    }}}}
+    </script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin="">
     <style>
-        .store-hero {
-            width: 100%;
-            aspect-ratio: 16/9;
-            object-fit: cover;
-            border-radius: 12px;
-            display: block;
-            margin-bottom: 16px;
-        }
-        .store-hero-placeholder {
-            width: 100%;
-            aspect-ratio: 16/9;
-            background: #e8f5e9;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            color: #a5d6a7;
-            margin-bottom: 16px;
-        }
-        .store-title {
-            font-size: 22px;
-            font-weight: bold;
-            color: #1b5e20;
-            margin: 0 0 16px;
-            text-align: center;
-        }
         #detail-map {
             width: 100%;
             height: 200px;
             border-radius: 12px;
             margin-bottom: 16px;
         }
-        .no-location {
-            width: 100%;
-            height: 120px;
-            background: #f5f5f5;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #aaa;
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
-        .back-btn {
-            display: inline-block;
-            margin-bottom: 16px;
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: bold;
-            color: #2e7d32;
-            background: white;
-            border: 2px solid #2e7d32;
-            border-radius: 10px;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .back-btn:active { background: #e8f5e9; }
-
-        /* ===== 評価分布 ===== */
-        .rating-dist {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-        .dist-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 6px;
-        }
-        .dist-row:last-child { margin-bottom: 0; }
-        .dist-stars {
-            font-size: 13px;
-            color: #f59e0b;
-            width: 70px;
-            text-align: right;
-            flex-shrink: 0;
-        }
-        .dist-bar-wrap {
-            flex: 1;
-            height: 16px;
-            background: #f0f0f0;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .dist-bar {
-            height: 100%;
-            background: #f59e0b;
-            border-radius: 8px;
-            transition: width 0.3s;
-        }
-        .dist-count {
-            font-size: 13px;
-            color: #666;
-            width: 32px;
-            text-align: right;
-            flex-shrink: 0;
-        }
-        .dist-total {
-            text-align: center;
-            font-size: 13px;
-            color: #888;
-            margin-top: 8px;
-        }
-
-        /* ===== 口コミ ===== */
-        .comment-section { margin-bottom: 16px; }
-        .comment-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .comment-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            padding: 14px 16px;
-            margin-bottom: 10px;
-        }
-        .comment-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .comment-user {
-            font-size: 13px;
-            font-weight: bold;
-            color: #1b5e20;
-        }
-        .comment-date {
-            font-size: 11px;
-            color: #aaa;
-        }
-        .comment-body {
-            font-size: 14px;
-            color: #333;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .comment-empty {
-            text-align: center;
-            color: #aaa;
-            font-size: 13px;
-            padding: 20px 0;
-        }
-        .btn-write-review {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background: #1565c0;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            margin-bottom: 16px;
-        }
-        .btn-write-review:active { background: #0d47a1; }
-        .comment-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-        }
-        .btn-edit-review {
-            background: none;
-            border: 1px solid #2e7d32;
-            color: #2e7d32;
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        .btn-edit-review:active { background: #e8f5e9; }
-        .btn-delete-review {
-            background: none;
-            border: 1px solid #e57373;
-            color: #e57373;
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .btn-delete-review:active { background: #ffebee; }
-        .btn-report-review {
-            background: none;
-            border: 1px solid #bbb;
-            color: #999;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 11px;
-            cursor: pointer;
-        }
-        .btn-report-review:active { background: #f5f5f5; }
-
         /* 通報モーダル */
-        .report-overlay {
-            display: none;
-        }
+        .report-overlay { display: none; }
         .report-overlay.open {
             display: flex;
             position: fixed;
@@ -225,38 +32,6 @@
             z-index: 10000;
             align-items: center;
             justify-content: center;
-        }
-        .report-card {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-            padding: 24px 20px 20px;
-            width: 300px;
-        }
-        .report-card-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #c62828;
-            margin: 0 0 14px;
-        }
-        .report-reason-list {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 12px;
-        }
-        .report-reason-list li {
-            margin-bottom: 8px;
-        }
-        .report-reason-list label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: #333;
-            cursor: pointer;
-        }
-        .report-reason-list input[type="radio"] {
-            accent-color: #c62828;
         }
         .report-free-text {
             display: none;
@@ -271,115 +46,96 @@
             margin-bottom: 12px;
         }
         .report-free-text.show { display: block; }
-        .report-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .report-actions button {
-            flex: 1;
-            padding: 10px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-        }
-        .btn-report-submit { background: #c62828; color: white; }
-        .btn-report-submit:active { background: #b71c1c; }
-        .btn-report-submit:disabled { background: #ccc; color: #888; }
-        .btn-report-cancel { background: #f5f5f5; color: #333; }
-        .btn-report-cancel:active { background: #e0e0e0; }
-        .comment-mine-badge {
-            font-size: 11px;
-            color: #2e7d32;
-            background: #e8f5e9;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-weight: bold;
-        }
     </style>
 </head>
-<body class="app-page">
+<body class="bg-cream min-h-screen pb-20">
 
-<header class="app-header">
-    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">{{ app_name }}</a>
-    <span class="header-user" onclick="this.querySelector('.header-user-menu').classList.toggle('open')">
-        {{ username }} ▾
-        <div class="header-user-menu" id="user-menu">
-            <a class="header-user-menu-item" href="/help" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">ヘルプ</a>
-            <a class="header-user-menu-item" href="/export_my_data" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">マイデータ</a>
-            <a class="header-user-menu-item" href="/change_password" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">パスワード変更</a>
-            <button class="header-user-menu-item" style="color:#1565c0;" onclick="event.stopPropagation();document.getElementById('group-code-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">グループコード</button>
-            <button class="header-user-menu-item" onclick="event.stopPropagation();document.getElementById('logout-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">ログアウト</button>
-        </div>
-    </span>
-</header>
+<!-- Header -->
+<div class="navbar bg-white/80 backdrop-blur-md shadow-sm fixed top-0 left-0 right-0 z-50 h-14 min-h-0 px-4">
+  <div class="flex-1"><a href="/rating" class="font-bold text-ink text-lg tracking-tight">{{ app_name }}</a></div>
+  <div class="dropdown dropdown-end">
+    <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-1 text-ink/60">
+      <span class="text-sm">{{ username }}</span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </div>
+    <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-xl z-[200] w-48 p-2 shadow-xl border border-gray-100 mt-1">
+      <li><a href="/help" class="text-sage-dark font-medium">ヘルプ</a></li>
+      <li><a href="/export_my_data" class="text-sage-dark font-medium">マイデータ</a></li>
+      <li><a href="/change_password" class="text-sage-dark font-medium">パスワード変更</a></li>
+      <li><button onclick="this.closest('.dropdown').querySelector('[tabindex]').blur();document.getElementById('group-code-modal').classList.add('open')" class="text-blue-600 font-medium">グループコード</button></li>
+      <li><button onclick="this.closest('.dropdown').querySelector('[tabindex]').blur();document.getElementById('logout-modal').classList.add('open')" class="text-red-500 font-medium">ログアウト</button></li>
+    </ul>
+  </div>
+</div>
 
-<main class="app-main">
-    <a href="#" class="back-btn" onclick="history.back(); return false;">← 戻る</a>
+<main class="pt-16 px-4 max-w-lg mx-auto">
+    <button onclick="history.back()" class="btn btn-ghost btn-sm text-brand gap-1 mb-4 -ml-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        戻る
+    </button>
 
     {% if store.image_url %}
-    <img src="{{ store.image_url }}" alt="{{ store.object_name }}" class="store-hero" loading="lazy">
+    <img src="{{ store.image_url }}" alt="{{ store.object_name }}" class="w-full aspect-video object-cover rounded-2xl mb-4" loading="lazy">
     {% else %}
-    <div class="store-hero-placeholder">🍽️</div>
+    <div class="w-full aspect-video bg-golden/30 rounded-2xl flex items-center justify-center text-5xl text-golden mb-4">🍽️</div>
     {% endif %}
 
-    <h1 class="store-title">{{ store.object_name }}</h1>
+    <h1 class="text-xl font-bold text-ink text-center mb-4">{{ store.object_name }}</h1>
 
     {% if store.latitude and store.longitude %}
     <div id="detail-map"></div>
     {% else %}
-    <div class="no-location">位置情報が登録されていません</div>
+    <div class="w-full h-28 bg-gray-100 rounded-xl flex items-center justify-center text-ink/30 text-sm mb-4">位置情報が登録されていません</div>
     {% endif %}
 
     <!-- 評価分布 -->
-    <section>
-        <h2 class="section-title">みんなの評価</h2>
+    <section class="mb-4">
+        <h2 class="text-base font-bold text-ink mb-3">みんなの評価</h2>
         {% if total_ratings > 0 %}
-        <div class="rating-dist">
+        <div class="bg-white rounded-2xl shadow-lg p-4">
             {% for d in rating_distribution %}
-            <div class="dist-row">
-                <span class="dist-stars">{{ "★" * d.stars }}{{ "☆" * (5 - d.stars) }}</span>
-                <div class="dist-bar-wrap">
-                    <div class="dist-bar" style="width: {{ (d.count / total_ratings * 100) | round(1) }}%"></div>
+            <div class="flex items-center gap-2 mb-1.5 last:mb-0">
+                <span class="text-xs text-golden w-[70px] text-right flex-shrink-0">{{ "★" * d.stars }}{{ "☆" * (5 - d.stars) }}</span>
+                <div class="flex-1 h-4 bg-golden/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-golden rounded-full transition-all duration-300" style="width: {{ (d.count / total_ratings * 100) | round(1) }}%"></div>
                 </div>
-                <span class="dist-count">{{ d.count }}人</span>
+                <span class="text-xs text-ink/50 w-8 text-right flex-shrink-0">{{ d.count }}人</span>
             </div>
             {% endfor %}
-            <div class="dist-total">{{ total_ratings }}人が評価</div>
+            <div class="text-center text-xs text-ink/40 mt-2">{{ total_ratings }}人が評価</div>
         </div>
         {% else %}
-        <div class="rating-dist">
-            <div class="dist-total">まだ評価がありません</div>
+        <div class="bg-white rounded-2xl shadow-lg p-4">
+            <div class="text-center text-sm text-ink/40">まだ評価がありません</div>
         </div>
         {% endif %}
     </section>
 
     <!-- 口コミ -->
-    <section class="comment-section">
-        <h2 class="section-title">口コミ（{{ comments | length }}件）</h2>
-        <a href="/post_review?object_id={{ store.object_id }}" class="btn-write-review">口コミを投稿する</a>
+    <section class="mb-4">
+        <h2 class="text-base font-bold text-ink mb-3">口コミ（{{ comments | length }}件）</h2>
+        <a href="/post_review?object_id={{ store.object_id }}" class="btn bg-blue-600 hover:bg-blue-700 text-white border-none w-full mb-4 text-sm font-bold">口コミを投稿する</a>
         {% if comments %}
-        <ul class="comment-list">
+        <ul class="space-y-3">
             {% for c in comments %}
-            <li class="comment-card" {% if loop.index > 5 %}style="display:none;" data-extra-comment{% endif %}>
-                <div class="comment-header">
-                    <span class="comment-date">{{ c.created_at }}</span>
-                    {% if c.is_mine %}<span class="comment-mine-badge">自分の投稿</span>{% endif %}
+            <li class="bg-white rounded-2xl shadow-lg p-4" {% if loop.index > 5 %}style="display:none;" data-extra-comment{% endif %}>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs text-ink/40">{{ c.created_at }}</span>
+                    {% if c.is_mine %}<span class="text-xs text-sage-dark bg-sage/20 px-2 py-0.5 rounded-full font-bold">自分の投稿</span>{% endif %}
                 </div>
-                <div class="comment-body">{{ c.comment }}</div>
+                <div class="text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">{{ c.comment }}</div>
                 {% if c.is_mine %}
-                <div class="comment-actions">
-                    <a href="/edit_review/{{ c.review_id }}" class="btn-edit-review">編集</a>
-                    <form method="post" action="/delete_review" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="flex gap-2 mt-3">
+                    <a href="/edit_review/{{ c.review_id }}" class="btn btn-outline btn-xs border-sage text-sage-dark hover:bg-sage/10 hover:border-sage">編集</a>
+                    <form method="post" action="/delete_review" class="m-0"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="review_id" value="{{ c.review_id }}">
-                        <button type="submit" class="btn-delete-review"
+                        <button type="submit" class="btn btn-outline btn-xs border-red-300 text-red-400 hover:bg-red-50 hover:border-red-300"
                                 onclick="return confirm('この口コミを削除しますか？')">削除</button>
                     </form>
                 </div>
                 {% else %}
-                <div class="comment-actions">
-                    <button type="button" class="btn-report-review"
+                <div class="flex gap-2 mt-3">
+                    <button type="button" class="btn btn-ghost btn-xs text-ink/30 hover:text-ink/50"
                             onclick="openReportModal({{ c.review_id }})">通報</button>
                 </div>
                 {% endif %}
@@ -388,34 +144,23 @@
         </ul>
         {% if comments | length > 5 %}
         <button id="show-more-comments" onclick="document.querySelectorAll('[data-extra-comment]').forEach(e=>e.style.display='');this.style.display='none';"
-                style="display:block;width:100%;padding:10px;margin-top:8px;background:white;border:1px solid #a5d6a7;border-radius:8px;color:#2e7d32;font-size:13px;font-weight:bold;cursor:pointer;text-align:center;">
+                class="btn btn-outline btn-sm w-full mt-3 border-brand/30 text-brand hover:bg-brand/5 hover:border-brand font-bold">
             残り{{ comments | length - 5 }}件の口コミを表示
         </button>
         {% endif %}
         {% else %}
-        <div class="comment-empty">まだ口コミがありません。最初の投稿者になりましょう！</div>
+        <div class="text-center text-ink/40 text-sm py-5">まだ口コミがありません。最初の投稿者になりましょう！</div>
         {% endif %}
     </section>
 </main>
 
-<nav class="bottom-nav">
-    <a href="/rating" class="nav-item">
-        <span class="nav-icon">⭐</span>
-        <span class="nav-label">評価</span>
-    </a>
-    <a href="/recommendations" class="nav-item">
-        <span class="nav-icon">🍽️</span>
-        <span class="nav-label">おすすめ</span>
-    </a>
-    <a href="/map" class="nav-item">
-        <span class="nav-icon">🗺️</span>
-        <span class="nav-label">マップ</span>
-    </a>
-    <a href="/request_object" class="nav-item">
-        <span class="nav-icon">➕</span>
-        <span class="nav-label">リクエスト</span>
-    </a>
-</nav>
+<!-- Bottom Nav -->
+<div class="btm-nav btm-nav-sm bg-white/90 backdrop-blur border-t border-gray-200 z-50">
+  <a href="/rating" class="text-ink/40"><span class="text-base">⭐</span><span class="btm-nav-label text-[11px]">評価</span></a>
+  <a href="/recommendations" class="text-ink/40"><span class="text-base">🍽️</span><span class="btm-nav-label text-[11px]">おすすめ</span></a>
+  <a href="/map" class="text-ink/40"><span class="text-base">🗺️</span><span class="btm-nav-label text-[11px]">マップ</span></a>
+  <a href="/request_object" class="text-ink/40"><span class="text-base">➕</span><span class="btm-nav-label text-[11px]">リクエスト</span></a>
+</div>
 
 {% if store.latitude and store.longitude %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -433,44 +178,25 @@ L.marker([lat, lng]).addTo(map);
 </script>
 {% endif %}
 
-
-<!-- グループコード入力モーダル -->
-<div class="logout-overlay" id="group-code-modal">
-    <div class="logout-card">
-        <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
-        <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
-        <div id="group-error-msg" style="display:none;background:#ffebee;color:#c62828;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:10px;">このグループコードは存在しません。</div>
-        <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <input type="text" name="group_code" placeholder="グループコード"
-                value="{{ current_group_code or '' }}"
-                style="display:block;width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:14px;box-sizing:border-box;">
-            <div class="logout-card-actions">
-                <button type="button" class="btn-logout-cancel" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
-                <button type="submit" class="btn-logout-confirm" style="background:#1565c0;">保存</button>
-            </div>
-        </form>
-    </div>
-</div>
-<!-- ログアウト確認モーダル -->
 <!-- 通報モーダル -->
 <div class="report-overlay" id="report-modal">
-    <div class="report-card">
-        <div class="report-card-title">口コミを通報</div>
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-[300px]">
+        <div class="text-base font-bold text-red-600 mb-3">口コミを通報</div>
         <form method="post" action="/report_review" id="report-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="review_id" id="report-review-id" value="">
             <input type="hidden" name="reason" id="report-reason-value" value="">
-            <ul class="report-reason-list">
-                <li><label><input type="radio" name="reason_select" value="誹謗中傷・攻撃的な表現" onchange="selectReason(this)"> 誹謗中傷・攻撃的な表現</label></li>
-                <li><label><input type="radio" name="reason_select" value="個人情報の記載" onchange="selectReason(this)"> 個人情報の記載</label></li>
-                <li><label><input type="radio" name="reason_select" value="宣伝・スパム" onchange="selectReason(this)"> 宣伝・スパム</label></li>
-                <li><label><input type="radio" name="reason_select" value="店舗と無関係な内容" onchange="selectReason(this)"> 店舗と無関係な内容</label></li>
-                <li><label><input type="radio" name="reason_select" value="不快・不適切な表現" onchange="selectReason(this)"> 不快・不適切な表現</label></li>
-                <li><label><input type="radio" name="reason_select" value="other" onchange="selectReason(this)"> その他</label></li>
+            <ul class="space-y-2 mb-3 list-none p-0">
+                <li><label class="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" name="reason_select" value="誹謗中傷・攻撃的な表現" onchange="selectReason(this)" class="radio radio-sm radio-error"> 誹謗中傷・攻撃的な表現</label></li>
+                <li><label class="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" name="reason_select" value="個人情報の記載" onchange="selectReason(this)" class="radio radio-sm radio-error"> 個人情報の記載</label></li>
+                <li><label class="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" name="reason_select" value="宣伝・スパム" onchange="selectReason(this)" class="radio radio-sm radio-error"> 宣伝・スパム</label></li>
+                <li><label class="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" name="reason_select" value="店舗と無関係な内容" onchange="selectReason(this)" class="radio radio-sm radio-error"> 店舗と無関係な内容</label></li>
+                <li><label class="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" name="reason_select" value="不快・不適切な表現" onchange="selectReason(this)" class="radio radio-sm radio-error"> 不快・不適切な表現</label></li>
+                <li><label class="flex items-center gap-2 text-sm text-ink cursor-pointer"><input type="radio" name="reason_select" value="other" onchange="selectReason(this)" class="radio radio-sm radio-error"> その他</label></li>
             </ul>
             <textarea class="report-free-text" id="report-free-text" placeholder="理由を入力してください" maxlength="200"></textarea>
-            <div class="report-actions">
-                <button type="button" class="btn-report-cancel" onclick="closeReportModal()">キャンセル</button>
-                <button type="submit" class="btn-report-submit" id="btn-report-submit" disabled>通報する</button>
+            <div class="flex gap-2">
+                <button type="button" class="btn btn-ghost flex-1" onclick="closeReportModal()">キャンセル</button>
+                <button type="submit" class="btn bg-red-600 hover:bg-red-700 text-white border-none flex-1" id="btn-report-submit" disabled>通報する</button>
             </div>
         </form>
     </div>
@@ -522,24 +248,41 @@ if (new URLSearchParams(location.search).get('reported') === '1') {
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:10000;display:flex;align-items:center;justify-content:center;';
     overlay.innerHTML = '<div style="background:white;border-radius:16px;padding:28px 24px 20px;width:280px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.25);">' +
         '<div style="font-size:36px;margin-bottom:12px;">&#x2714;&#xFE0F;</div>' +
-        '<div style="font-size:16px;font-weight:bold;color:#1b5e20;margin-bottom:8px;">ご協力ありがとうございました。</div>' +
+        '<div style="font-size:16px;font-weight:bold;color:#3D405B;margin-bottom:8px;">ご協力ありがとうございました。</div>' +
         '<div style="font-size:13px;color:#666;margin-bottom:20px;">通報内容を確認し、適切に対応いたします。</div>' +
-        '<button onclick="this.closest(\'div\').parentElement.remove();history.replaceState(null,\'\',location.pathname)" style="width:100%;padding:10px;background:#2e7d32;color:white;border:none;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;">閉じる</button>' +
+        '<button onclick="this.closest(\'div\').parentElement.remove();history.replaceState(null,\'\',location.pathname)" style="width:100%;padding:10px;background:#E07A5F;color:white;border:none;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;">閉じる</button>' +
         '</div>';
     document.body.appendChild(overlay);
 }
 </script>
 
-<div class="logout-overlay" id="logout-modal">
-    <div class="logout-card">
-        <div class="logout-card-title">ログアウト</div>
-        <div class="logout-card-msg">ログアウトしますか？</div>
-        <div class="logout-card-actions">
-            <button class="btn-logout-cancel" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
-            <form method="post" action="/logout" style="display:inline;margin:0;flex:1;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-logout-confirm" style="width:100%;">ログアウト</button></form>
+<!-- グループコードモーダル -->
+<div class="fixed inset-0 bg-black/40 z-[10000] items-center justify-center hidden" id="group-code-modal">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-72 text-center">
+        <h3 class="text-lg font-bold text-blue-600 mb-2">グループコード</h3>
+        <p class="text-sm text-ink/50 mb-3">所属するグループのコードを入力してください。</p>
+        <div id="group-error-msg" style="display:none;" class="bg-red-50 text-red-600 p-2 rounded-lg text-xs mb-3">このグループコードは存在しません。</div>
+        <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="group_code" placeholder="グループコード" value="{{ current_group_code or '' }}" class="input input-bordered w-full mb-3 text-base" />
+            <div class="flex gap-2">
+                <button type="button" class="btn btn-ghost flex-1" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
+                <button type="submit" class="btn bg-blue-600 hover:bg-blue-700 text-white border-none flex-1">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ログアウトモーダル -->
+<div class="fixed inset-0 bg-black/40 z-[10000] items-center justify-center hidden" id="logout-modal">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-72 text-center">
+        <h3 class="text-lg font-bold text-ink mb-2">ログアウト</h3>
+        <p class="text-sm text-ink/50 mb-5">ログアウトしますか？</p>
+        <div class="flex gap-2">
+            <button class="btn btn-ghost flex-1" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
+            <form method="post" action="/logout" class="flex-1"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn bg-red-500 hover:bg-red-600 text-white border-none w-full">ログアウト</button></form>
         </div>
     </div>
 </div>
+<style>#group-code-modal.open, #logout-modal.open { display: flex !important; }</style>
 <script>if(new URLSearchParams(location.search).has('group_error')){document.getElementById('group-code-modal').classList.add('open');document.getElementById('group-error-msg').style.display='block';}</script>
 </body>
 </html>

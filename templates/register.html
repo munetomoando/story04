@@ -1,57 +1,74 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ユーザー登録</title>
-    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = { theme: { extend: { colors: {
+      brand: '#E07A5F', 'brand-dark': '#C85A42', sage: '#81B29A', 'sage-dark': '#5E9B80',
+      golden: '#F2CC8F', ink: '#3D405B', cream: '#FAF8F0',
+    }}}}
+    </script>
 </head>
-<body>
-    <div class="container">
-        <h1>ユーザー登録</h1>
+<body class="bg-cream min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md">
+        <h1 class="text-2xl font-bold text-ink text-center mb-6">ユーザー登録</h1>
 
         <div id="flash-messages" class="flash-messages" style="display: none;"></div>
 
-        <div class="form-wrapper">
-            <form action="/register" method="post" class="form-container" id="register-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <label for="username">ユーザー名:</label>
-                <p class="info-text">※ ユーザー名は、アルファベット（大文字・小文字）と数字のみ使用できます。</p>
-                <p class="info-text" style="color:#c62828;">※ 本名が推察されるようなユーザー名は避けてください。</p>
-                <input type="text" id="username" name="username" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます" autocomplete="username" onblur="checkUsername()">
-                <p id="username-message" style="color: red; display: none;"></p>
+        <form action="/register" method="post" id="register-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="mb-4">
+                <label for="username" class="block text-sm font-semibold text-ink mb-1">ユーザー名:</label>
+                <p class="text-xs text-ink/50 mb-1">※ ユーザー名は、アルファベット（大文字・小文字）と数字のみ使用できます。</p>
+                <p class="text-xs text-red-600 mb-2">※ 本名が推察されるようなユーザー名は避けてください。</p>
+                <input type="text" id="username" name="username" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます" autocomplete="username" onblur="checkUsername()"
+                       class="input input-bordered w-full bg-cream/50 focus:outline-none focus:border-brand">
+                <p id="username-message" class="text-red-600 text-sm mt-1" style="display: none;"></p>
+            </div>
 
-                <label for="password">パスワード (8文字以上、英数字と記号を1つ以上含めてください):</label>
-                <input type="password" id="password" name="password" pattern="^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$" required title="8文字以上の英数字+記号を含めてください" autocomplete="new-password">
+            <div class="mb-4">
+                <label for="password" class="block text-sm font-semibold text-ink mb-1">パスワード (8文字以上、英数字と記号を1つ以上含めてください):</label>
+                <input type="password" id="password" name="password" pattern="^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$" required title="8文字以上の英数字+記号を含めてください" autocomplete="new-password"
+                       class="input input-bordered w-full bg-cream/50 focus:outline-none focus:border-brand">
+            </div>
 
-                <label for="password_confirm">パスワード（確認）:</label>
-                <input type="password" id="password_confirm" required autocomplete="new-password" placeholder="もう一度入力してください">
-                <p id="password-match-message" style="display:none; font-size:13px; margin-top:4px;"></p>
+            <div class="mb-4">
+                <label for="password_confirm" class="block text-sm font-semibold text-ink mb-1">パスワード（確認）:</label>
+                <input type="password" id="password_confirm" required autocomplete="new-password" placeholder="もう一度入力してください"
+                       class="input input-bordered w-full bg-cream/50 focus:outline-none focus:border-brand">
+                <p id="password-match-message" class="text-sm mt-1" style="display:none;"></p>
+            </div>
 
-                {% if invite_required is defined and invite_required %}
-                <label for="invite_code">招待コード:</label>
-                <p class="info-text">※ 授業やイベントで配布された招待コードを入力してください。</p>
-                <input type="text" id="invite_code" name="invite_code" required placeholder="招待コードを入力">
-                {% endif %}
+            {% if invite_required is defined and invite_required %}
+            <div class="mb-4">
+                <label for="invite_code" class="block text-sm font-semibold text-ink mb-1">招待コード:</label>
+                <p class="text-xs text-ink/50 mb-2">※ 授業やイベントで配布された招待コードを入力してください。</p>
+                <input type="text" id="invite_code" name="invite_code" required placeholder="招待コードを入力"
+                       class="input input-bordered w-full bg-cream/50 focus:outline-none focus:border-brand">
+            </div>
+            {% endif %}
 
-                {% if error_message is defined and error_message %}
-                <p style="color:#c62828; font-weight:bold; font-size:14px;">{{ error_message }}</p>
-                {% endif %}
+            {% if error_message is defined and error_message %}
+            <p class="text-red-700 font-bold text-sm mb-4">{{ error_message }}</p>
+            {% endif %}
 
-                <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;margin:16px 0;font-size:12px;color:#5d4037;line-height:1.6;text-align:left;">
-                    登録することで以下に同意したものとみなします：<br>
-                    ・ログイン機能のためにセッションCookieを使用します<br>
-                    ・評価データはおすすめ機能の改善に利用されます<br>
-                    ・登録後7日以内にログインがない場合、アカウントは自動的に削除されます<br>
-                    ・最終ログインから2年以上経過したアカウントは、評価データを含め自動的に削除されます<br>
-                    ・削除されたデータの復元はできません<br>
-                    ・ユーザーメニューの「マイデータ」から自分のデータをエクスポートできます
-                </div>
+            <div class="bg-golden/30 border border-golden rounded-xl p-3 mb-4 text-xs text-ink/70 leading-relaxed text-left">
+                登録することで以下に同意したものとみなします：<br>
+                ・ログイン機能のためにセッションCookieを使用します<br>
+                ・評価データはおすすめ機能の改善に利用されます<br>
+                ・登録後7日以内にログインがない場合、アカウントは自動的に削除されます<br>
+                ・最終ログインから2年以上経過したアカウントは、評価データを含め自動的に削除されます<br>
+                ・削除されたデータの復元はできません<br>
+                ・ユーザーメニューの「マイデータ」から自分のデータをエクスポートできます
+            </div>
 
-                <button type="submit" class="big-button submit-btn" id="btn-register">登録</button>
-            </form>
-        </div>
+            <button type="submit" class="btn bg-brand hover:bg-brand-dark text-white border-none w-full text-base" id="btn-register">登録</button>
+        </form>
 
-        <p>既に登録済みですか？ <a href="/" class="big-button back-btn">ログイン</a></p>
+        <p class="text-center text-sm text-ink/60 mt-5">既に登録済みですか？ <a href="/" class="text-brand font-semibold hover:text-brand-dark">ログイン</a></p>
     </div>
 
     <script>
@@ -68,7 +85,7 @@
             }
             if (pw1.value === pw2.value) {
                 msg.textContent = 'パスワードが一致しています';
-                msg.style.color = '#2e7d32';
+                msg.style.color = '#81B29A';
                 msg.style.display = 'block';
                 btn.disabled = false;
             } else {
@@ -115,9 +132,9 @@
                 .catch(error => console.error("ユーザー名チェックエラー:", error));
         }
     </script>
-<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#333;color:white;padding:14px 20px;font-size:13px;z-index:10000;text-align:center;line-height:1.6;">
+<div id="cookie-banner" class="fixed bottom-0 left-0 right-0 bg-ink text-white px-5 py-3 text-sm z-[10000] text-center leading-relaxed" style="display:none;">
     このサイトではログイン機能のためにセッションCookieを使用しています。利用を続けることで同意したものとみなします。
-    <button onclick="document.getElementById('cookie-banner').style.display='none';localStorage.setItem('cookie_ok','1')" style="margin-left:12px;background:#2e7d32;color:white;border:none;padding:6px 16px;border-radius:6px;font-size:13px;cursor:pointer;">OK</button>
+    <button onclick="document.getElementById('cookie-banner').style.display='none';localStorage.setItem('cookie_ok','1')" class="ml-3 bg-brand hover:bg-brand-dark text-white border-none px-4 py-1.5 rounded-lg text-sm cursor-pointer">OK</button>
 </div>
 <script>if(!localStorage.getItem('cookie_ok'))document.getElementById('cookie-banner').style.display='block';</script>
 </body>

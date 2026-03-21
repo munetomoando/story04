@@ -1,169 +1,169 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>評価 — {{ app_name }}</title>
-    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = { theme: { extend: { colors: {
+      brand: '#E07A5F', 'brand-dark': '#C85A42', sage: '#81B29A', 'sage-dark': '#5E9B80',
+      golden: '#F2CC8F', ink: '#3D405B', cream: '#FAF8F0',
+    }, animation: {
+      'slide-in': 'slideIn 0.25s ease',
+      'slide-back': 'slideBack 0.25s ease',
+    }, keyframes: {
+      slideIn:  { from: { opacity: '0', transform: 'translateX(40px)' },  to: { opacity: '1', transform: 'translateX(0)' } },
+      slideBack:{ from: { opacity: '0', transform: 'translateX(-40px)' }, to: { opacity: '1', transform: 'translateX(0)' } },
+    }}}}
+    </script>
 </head>
-<body class="app-page">
+<body class="bg-cream min-h-screen pb-20">
 
-<header class="app-header">
-    <a href="/rating" class="header-title" style="text-decoration:none;color:inherit;">{{ app_name }}</a>
-    <span class="header-user" onclick="this.querySelector('.header-user-menu').classList.toggle('open')">
-        {{ username }} ▾
-        <div class="header-user-menu" id="user-menu">
-            <a class="header-user-menu-item" href="/help" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">ヘルプ</a>
-            <a class="header-user-menu-item" href="/export_my_data" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">マイデータ</a>
-            <a class="header-user-menu-item" href="/change_password" onclick="event.stopPropagation();" style="color:#2e7d32;text-decoration:none;">パスワード変更</a>
-            <button class="header-user-menu-item" style="color:#1565c0;" onclick="event.stopPropagation();document.getElementById('group-code-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">グループコード</button>
-            <button class="header-user-menu-item" onclick="event.stopPropagation();document.getElementById('logout-modal').classList.add('open');document.querySelector('.header-user-menu').classList.remove('open')">ログアウト</button>
-        </div>
-    </span>
-</header>
+<!-- ===== ヘッダー ===== -->
+<div class="navbar bg-white/80 backdrop-blur-md shadow-sm fixed top-0 left-0 right-0 z-50 h-14 min-h-0 px-4">
+  <div class="flex-1"><a href="/rating" class="font-bold text-ink text-lg tracking-tight">{{ app_name }}</a></div>
+  <div class="dropdown dropdown-end">
+    <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-1 text-ink/60">
+      <span class="text-sm">{{ username }}</span>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </div>
+    <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-xl z-[200] w-48 p-2 shadow-xl border border-gray-100 mt-1">
+      <li><a href="/help" class="text-sage-dark font-medium">ヘルプ</a></li>
+      <li><a href="/export_my_data" class="text-sage-dark font-medium">マイデータ</a></li>
+      <li><a href="/change_password" class="text-sage-dark font-medium">パスワード変更</a></li>
+      <li><button onclick="this.closest('.dropdown').querySelector('[tabindex]').blur();document.getElementById('group-code-modal').classList.add('open')" class="text-blue-600 font-medium">グループコード</button></li>
+      <li><button onclick="this.closest('.dropdown').querySelector('[tabindex]').blur();document.getElementById('logout-modal').classList.add('open')" class="text-red-500 font-medium">ログアウト</button></li>
+    </ul>
+  </div>
+</div>
 
-<main class="app-main">
+<!-- ===== メインコンテンツ ===== -->
+<main class="pt-16 px-4 max-w-md mx-auto">
 
-<!-- ===== モード選択（評価済みユーザーのみ表示） ===== -->
+<!-- モード選択 -->
 <div id="mode-section" style="display:none;">
-    <h2 class="section-title">どの店舗を評価しますか？</h2>
-    <div id="mode-btn-list" class="mode-btn-list"></div>
+    <h2 class="text-lg font-bold text-ink mb-3">どの店舗を評価しますか？</h2>
+    <div id="mode-btn-list" class="flex flex-col gap-3"></div>
 </div>
 
-<!-- ===== カードUI ===== -->
+<!-- カードUI -->
 <div id="card-section" style="display:none;">
-    <div class="progress-bar-wrap">
-        <div class="progress-bar" id="progress-bar"></div>
+    <div class="h-1.5 bg-gray-200 rounded-full mb-1.5 overflow-hidden">
+        <div class="h-full bg-brand rounded-full transition-all duration-300" id="progress-bar" style="width:0%"></div>
     </div>
-    <p class="progress-text" id="progress-text"></p>
-
-    <div id="card-container" class="card-container"></div>
-
-    <div class="card-nav">
-        <button id="btn-back" class="btn-back" onclick="goBack()" disabled>← 戻る</button>
-        <button id="btn-skip" class="btn-skip" onclick="skipCard()">行ったことがない →</button>
+    <p class="text-center text-sm text-ink/50 mb-4" id="progress-text"></p>
+    <div id="card-container" class="min-h-[200px]"></div>
+    <div class="flex justify-center gap-3 mt-5">
+        <button id="btn-back" class="btn btn-outline btn-sm border-sage/40 text-sage rounded-full px-5" onclick="goBack()" disabled>← 戻る</button>
+        <button id="btn-skip" class="btn btn-ghost btn-sm text-ink/40 rounded-full px-5" onclick="skipCard()">行ったことがない →</button>
     </div>
 </div>
 
-<!-- ===== 一休み画面 ===== -->
-<div id="break-section" class="done-section" style="display:none;">
-    <div class="done-icon">☕</div>
-    <h2 class="done-title"><span id="break-count">{{ break_every }}</span>件の評価が完了！</h2>
-    <p class="done-desc">お疲れさまです。ここまでの評価でおすすめを表示することもできます。</p>
+<!-- 一休み -->
+<div id="break-section" style="display:none;" class="text-center py-8">
+    <div class="text-5xl mb-3">☕</div>
+    <h2 class="text-xl font-bold text-ink mb-2"><span id="break-count">{{ break_every }}</span>件の評価が完了！</h2>
+    <p class="text-ink/50 text-sm mb-6">お疲れさまです。ここまでの評価でおすすめを表示することもできます。</p>
     <form id="rating-form-break" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
-    <button class="btn-primary" onclick="submitRatingsBreak()">ここまでの評価でおすすめを見る</button>
-    <button class="btn-secondary" onclick="continueRating()">まだ続ける（残り <span id="break-remaining">0</span> 件）</button>
+    <button class="btn bg-brand hover:bg-brand-dark text-white border-none w-full shadow-md shadow-brand/20 mb-3" onclick="submitRatingsBreak()">ここまでの評価でおすすめを見る</button>
+    <button class="btn btn-outline border-sage/40 text-sage w-full" onclick="continueRating()">まだ続ける（残り <span id="break-remaining">0</span> 件）</button>
 </div>
 
-<!-- ===== 完了画面 ===== -->
-<div id="done-section" class="done-section" style="display:none;">
-    <div class="done-icon">✅</div>
-    <h2 class="done-title">すべて評価しました！</h2>
-    <p class="done-desc">評価を送信しておすすめを確認しましょう。</p>
-    <form id="rating-form" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <!-- JSが動的にhidden inputを追加 -->
-    </form>
-    <button class="btn-primary" onclick="submitRatings()">評価を送信しておすすめを見る</button>
-    <button class="btn-secondary" onclick="showRatedList()">評価済み一覧を確認・修正する</button>
+<!-- 完了 -->
+<div id="done-section" style="display:none;" class="text-center py-8">
+    <div class="text-5xl mb-3">✅</div>
+    <h2 class="text-xl font-bold text-ink mb-2">すべて評価しました！</h2>
+    <p class="text-ink/50 text-sm mb-6">評価を送信しておすすめを確認しましょう。</p>
+    <form id="rating-form" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
+    <button class="btn bg-brand hover:bg-brand-dark text-white border-none w-full shadow-md shadow-brand/20 mb-3" onclick="submitRatings()">評価を送信しておすすめを見る</button>
+    <button class="btn btn-outline border-sage/40 text-sage w-full" onclick="showRatedList()">評価済み一覧を確認・修正する</button>
 </div>
 
-<!-- ===== 評価済み一覧（修正用） ===== -->
+<!-- 評価済み一覧 -->
 <div id="rated-section" style="display:none;">
-    <h2 class="section-title">評価済みの店舗</h2>
+    <h2 class="text-lg font-bold text-ink mb-3">評価済みの店舗</h2>
     <div id="rated-list"></div>
-    <button class="btn-primary" onclick="submitRatings()">評価を送信</button>
-    <button class="btn-secondary" onclick="backToDone()">戻る</button>
+    <button class="btn bg-brand hover:bg-brand-dark text-white border-none w-full shadow-md shadow-brand/20 mb-3 mt-4" onclick="submitRatings()">評価を送信</button>
+    <button class="btn btn-outline border-sage/40 text-sage w-full" onclick="backToDone()">戻る</button>
 </div>
 
-<!-- ===== すべての店一覧（見直しモード） ===== -->
+<!-- すべての店一覧 -->
 <div id="all-list-section" style="display:none;">
-    <h2 class="section-title">すべての店舗を評価・見直す</h2>
+    <h2 class="text-lg font-bold text-ink mb-3">すべての店舗を評価・見直す</h2>
     <div id="all-list"></div>
     <form id="rating-form3" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
-    <button class="btn-primary" onclick="submitRatings3()">評価を送信しておすすめを見る</button>
-    <button class="btn-secondary" onclick="showModeSection()">← モード選択に戻る</button>
+    <button class="btn bg-brand hover:bg-brand-dark text-white border-none w-full shadow-md shadow-brand/20 mb-3 mt-4" onclick="submitRatings3()">評価を送信しておすすめを見る</button>
+    <button class="btn btn-outline border-sage/40 text-sage w-full" onclick="showModeSection()">← モード選択に戻る</button>
 </div>
 
-<!-- 評価がない場合の送信ボタン（未評価ゼロのとき） -->
-<div id="no-unrated-section" style="display:none;" class="done-section">
-    <div class="done-icon">🎉</div>
-    <h2 class="done-title">評価済みの店舗</h2>
-    <p class="done-desc">すべての店舗に評価があります。変更する場合は下の一覧から修正してください。</p>
+<!-- 評価なし -->
+<div id="no-unrated-section" style="display:none;" class="text-center py-8">
+    <div class="text-5xl mb-3">🎉</div>
+    <h2 class="text-xl font-bold text-ink mb-2">評価済みの店舗</h2>
+    <p class="text-ink/50 text-sm mb-6">すべての店舗に評価があります。変更する場合は下の一覧から修正してください。</p>
     <div id="no-unrated-list"></div>
     <form id="rating-form2" action="/submit_ratings" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"></form>
-    <button class="btn-primary" onclick="submitRatings2()">評価を更新して送信</button>
+    <button class="btn bg-brand hover:bg-brand-dark text-white border-none w-full shadow-md shadow-brand/20 mt-4" onclick="submitRatings2()">評価を更新して送信</button>
 </div>
 
-<!-- 口コミ投稿リンク -->
-<div style="text-align:center; padding:16px 0 8px;">
-    <a href="/post_review" style="color:#1565c0; font-size:14px; font-weight:bold; text-decoration:none;">口コミを投稿する →</a>
+<!-- 口コミリンク -->
+<div class="text-center py-4">
+    <a href="/post_review" class="text-blue-600 text-sm font-semibold hover:underline">口コミを投稿する →</a>
 </div>
 
 </main>
 
-<nav class="bottom-nav">
-    <a href="/rating" class="nav-item nav-active">
-        <span class="nav-icon">⭐</span>
-        <span class="nav-label">評価</span>
-    </a>
-    <a href="/recommendations" class="nav-item">
-        <span class="nav-icon">🍽️</span>
-        <span class="nav-label">おすすめ</span>
-    </a>
-    <a href="/map" class="nav-item">
-        <span class="nav-icon">🗺️</span>
-        <span class="nav-label">マップ</span>
-    </a>
-    <a href="/request_object" class="nav-item">
-        <span class="nav-icon">➕</span>
-        <span class="nav-label">リクエスト</span>
-    </a>
-</nav>
+<!-- ===== ボトムナビ ===== -->
+<div class="btm-nav btm-nav-sm bg-white/90 backdrop-blur border-t border-gray-200 z-50">
+  <a href="/rating" class="active text-brand">
+    <span class="text-base">⭐</span>
+    <span class="btm-nav-label text-[11px]">評価</span>
+  </a>
+  <a href="/recommendations" class="text-ink/40">
+    <span class="text-base">🍽️</span>
+    <span class="btm-nav-label text-[11px]">おすすめ</span>
+  </a>
+  <a href="/map" class="text-ink/40">
+    <span class="text-base">🗺️</span>
+    <span class="btm-nav-label text-[11px]">マップ</span>
+  </a>
+  <a href="/request_object" class="text-ink/40">
+    <span class="text-base">➕</span>
+    <span class="btm-nav-label text-[11px]">リクエスト</span>
+  </a>
+</div>
 
 <script>
 // ---- サーバーから渡されたデータ ----
 const UNRATED = {{ unrated_objects | tojson }};
 const RATED   = {{ rated_objects | tojson }};
-
-// ---- ユーザー別にsessionStorageキーをスコープ ----
 const SESSION_KEY = 'ratingSelections_{{ username }}';
 
-// ---- 状態管理 ----
 let currentIndex = 0;
-let currentQueue = [];   // モードに応じて設定されるカードキュー
-const selections = {};   // { object_id: rating_value }
-
-// 評価済みは初期値としてセット
+let currentQueue = [];
+const selections = {};
 RATED.forEach(r => { selections[r.id] = r.rating; });
 
-// 新規店舗モードは廃止（IDベースの判定が不正確なため）
-
-// ---- 起動 ----
 window.addEventListener('DOMContentLoaded', () => {
-    // sessionStorage から復元（同一ユーザーのみ）
-    // ただしサーバーから渡された RATED の値を優先
     try {
         const saved = sessionStorage.getItem(SESSION_KEY);
         if (saved) {
             const parsed = JSON.parse(saved);
-            // sessionStorage の値を適用するが、RATED の値で上書き
             Object.assign(selections, parsed);
             RATED.forEach(r => { selections[r.id] = r.rating; });
         }
     } catch(e) {}
 
     if (RATED.length > 0) {
-        // 評価済みユーザー → モード選択画面
         showModeSection();
     } else if (UNRATED.length === 0) {
-        // 全店舗評価済み
         showNoUnrated();
     } else {
-        // 初回ユーザー → そのまま未評価カード
         startMode('unrated');
     }
 
-    // ---- タッチスワイプ検出 ----
     let touchStartX = 0;
     let touchStartY = 0;
     const cardSection = document.getElementById('card-section');
@@ -175,63 +175,37 @@ window.addEventListener('DOMContentLoaded', () => {
         const dx = e.changedTouches[0].clientX - touchStartX;
         const dy = e.changedTouches[0].clientY - touchStartY;
         if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-        if (dx > 0) {
-            goBack();
-        } else {
-            skipCard();
-        }
+        if (dx > 0) goBack(); else skipCard();
     }, { passive: true });
 });
 
-// ---- モード選択画面 ----
 function showModeSection() {
     hideAllSections();
     document.getElementById('mode-section').style.display = 'block';
-
     const list = document.getElementById('mode-btn-list');
     const modes = [];
-
     if (UNRATED.length > 0) {
-        modes.push({
-            label: '未評価の店を評価する',
-            count: UNRATED.length,
-            icon: '⭐',
-            mode: 'unrated'
-        });
+        modes.push({ label: '未評価の店を評価する', count: UNRATED.length, icon: '⭐', mode: 'unrated' });
     }
-    modes.push({
-        label: 'すべての店を評価・見直す',
-        count: UNRATED.length + RATED.length,
-        icon: '📋',
-        mode: 'all'
-    });
-
+    modes.push({ label: 'すべての店を評価・見直す', count: UNRATED.length + RATED.length, icon: '📋', mode: 'all' });
     list.innerHTML = modes.map(m => `
-        <button class="mode-btn" onclick="startMode('${m.mode}')">
-            <span class="mode-btn-icon">${m.icon}</span>
-            <span class="mode-btn-label">${m.label}</span>
-            <span class="mode-btn-count">${m.count}件</span>
+        <button class="flex items-center gap-4 bg-white border-2 border-golden/40 rounded-2xl p-4 w-full text-left active:scale-[0.98] transition-all hover:border-brand/40 hover:shadow-md" onclick="startMode('${m.mode}')">
+            <span class="text-2xl">${m.icon}</span>
+            <span class="flex-1 font-bold text-ink">${m.label}</span>
+            <span class="text-sm text-ink/40">${m.count}件</span>
         </button>
     `).join('');
 }
 
-// ---- モード開始 ----
 function startMode(mode) {
     if (mode === 'all') {
-        // 一覧表示モード
         hideAllSections();
         document.getElementById('all-list-section').style.display = 'block';
         renderRatedListIn('all-list', 'rating-form3');
         return;
     }
-
     currentQueue = UNRATED;
-
-    if (currentQueue.length === 0) {
-        showNoUnrated();
-        return;
-    }
-
+    if (currentQueue.length === 0) { showNoUnrated(); return; }
     currentIndex = 0;
     hideAllSections();
     document.getElementById('card-section').style.display = 'block';
@@ -239,11 +213,10 @@ function startMode(mode) {
 }
 
 function hideAllSections() {
-    ['mode-section', 'card-section', 'done-section', 'rated-section', 'no-unrated-section', 'all-list-section', 'break-section']
+    ['mode-section','card-section','done-section','rated-section','no-unrated-section','all-list-section','break-section']
         .forEach(id => document.getElementById(id).style.display = 'none');
 }
 
-// ---- カード表示 ----
 function updateProgress() {
     const total = currentQueue.length;
     const current = currentIndex + 1;
@@ -256,56 +229,49 @@ function updateProgress() {
 
 function escAttr(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML.replace(/"/g, '&quot;'); }
 
-function buildCard(obj, extraClass) {
+function buildCard(obj, anim) {
     const saved = selections[obj.id];
     const imgHtml = obj.image_url
-        ? `<img src="${escAttr(obj.image_url)}" class="card-store-img" alt="${escAttr(obj.name)}" loading="lazy">`
+        ? `<img src="${escAttr(obj.image_url)}" class="w-full h-44 object-cover rounded-xl mb-4" alt="${escAttr(obj.name)}" loading="lazy">`
         : '';
     return `
-        <div class="rating-card ${extraClass || ''}" id="card-${obj.id}">
+        <div class="bg-white rounded-2xl p-6 shadow-lg ${anim || 'animate-slide-in'}" id="card-${obj.id}">
             ${imgHtml}
-            <div class="card-store-name">${obj.name}</div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:4px;padding:0 4px;">
-                <span>低い</span><span>高い</span>
-            </div>
-            <div class="rating-btn-group">
+            <div class="text-xl font-bold text-ink text-center mb-5 leading-tight">${obj.name}</div>
+            <div class="flex justify-between text-[11px] text-ink/30 px-1 mb-1"><span>低い</span><span>高い</span></div>
+            <div class="flex justify-center gap-2.5">
                 ${[1,2,3,4,5].map(v => `
-                <button class="rating-btn ${saved == v ? 'selected' : ''}"
-                        data-value="${v}"
-                        onclick="selectRating('${obj.id}', ${v})">
+                <button class="w-12 h-12 rounded-xl font-bold text-lg transition-all active:scale-90
+                    ${saved == v ? 'bg-brand text-white shadow-md shadow-brand/30' : 'bg-cream text-ink/60 hover:bg-golden/30'}"
+                    data-value="${v}" onclick="selectRating('${obj.id}', ${v})">
                     ${v}
                 </button>`).join('')}
             </div>
         </div>`;
 }
 
-const BREAK_EVERY = {{ break_every }};  // 何件ごとに休憩を挟むか
-let ratedInSession = 0;   // このセッションで評価した件数
+const BREAK_EVERY = {{ break_every }};
+let ratedInSession = 0;
+let lastBreakAt = -1;
 
 function showCard(index) {
     const container = document.getElementById('card-container');
-    if (index >= currentQueue.length) {
-        finishCards();
-        return;
-    }
-    // 20件ごとに休憩画面を表示
+    if (index >= currentQueue.length) { finishCards(); return; }
     if (ratedInSession > 0 && ratedInSession % BREAK_EVERY === 0 && ratedInSession !== lastBreakAt) {
         lastBreakAt = ratedInSession;
         showBreak(index);
         return;
     }
-    container.innerHTML = buildCard(currentQueue[index], '');
+    container.innerHTML = buildCard(currentQueue[index], 'animate-slide-in');
     currentIndex = index;
     updateProgress();
 }
-let lastBreakAt = -1;
 
 function showBreak(resumeIndex) {
     hideAllSections();
     document.getElementById('break-count').textContent = ratedInSession;
     document.getElementById('break-remaining').textContent = currentQueue.length - resumeIndex;
     document.getElementById('break-section').style.display = 'block';
-    // 「続ける」で再開するインデックスを保存
     window._breakResumeIndex = resumeIndex;
 }
 
@@ -324,7 +290,7 @@ function submitRatingsBreak() {
 function showCardBack(index) {
     const container = document.getElementById('card-container');
     if (index < 0 || index >= currentQueue.length) return;
-    container.innerHTML = buildCard(currentQueue[index], 'card-slide-back');
+    container.innerHTML = buildCard(currentQueue[index], 'animate-slide-back');
     currentIndex = index;
     updateProgress();
 }
@@ -333,15 +299,15 @@ function selectRating(objectId, value) {
     selections[objectId] = value;
     ratedInSession++;
     saveToSession();
-
-    document.querySelectorAll('.rating-btn').forEach(btn => {
-        btn.classList.toggle('selected', parseInt(btn.dataset.value) === value);
+    document.querySelectorAll('#card-container button[data-value]').forEach(btn => {
+        const v = parseInt(btn.dataset.value);
+        if (v === value) {
+            btn.className = 'w-12 h-12 rounded-xl font-bold text-lg transition-all active:scale-90 bg-brand text-white shadow-md shadow-brand/30';
+        } else {
+            btn.className = 'w-12 h-12 rounded-xl font-bold text-lg transition-all active:scale-90 bg-cream text-ink/60 hover:bg-golden/30';
+        }
     });
-
-    setTimeout(() => {
-        currentIndex++;
-        showCard(currentIndex);
-    }, 300);
+    setTimeout(() => { currentIndex++; showCard(currentIndex); }, 300);
 }
 
 function skipCard() {
@@ -386,22 +352,22 @@ function renderRatedListIn(containerId, formId) {
     container.innerHTML = allObjects.map(obj => {
         const val = selections[obj.id] || '';
         return `
-        <div class="rated-item">
-            <span class="rated-name">${obj.name}</span>
+        <div class="flex items-center justify-between py-3 border-b border-cream-dark gap-2">
+            <span class="text-sm font-bold text-ink flex-1 text-left">${obj.name}</span>
             <div>
-                <div style="display:flex;justify-content:space-between;font-size:10px;color:#888;padding:0 2px 2px;">
-                    <span>低い</span><span>高い</span>
-                </div>
-                <div class="rated-btn-group">
+                <div class="flex justify-between text-[10px] text-ink/30 px-0.5 mb-0.5"><span>低い</span><span>高い</span></div>
+                <div class="flex gap-1 items-center" data-obj-id="${obj.id}">
                     ${[1,2,3,4,5].map(v => `
                     <button type="button"
-                            class="rating-btn small ${val == v ? 'selected' : ''}"
-                            onclick="changeRating('${obj.id}', ${v}, this)">
+                        class="w-9 h-9 rounded-lg text-sm font-bold transition-all
+                        ${val == v ? 'bg-brand text-white' : 'bg-cream text-ink/50'}"
+                        data-value="${v}"
+                        onclick="changeRating('${obj.id}', ${v}, this)">
                         ${v}
                     </button>`).join('')}
-                    <button type="button" class="btn-unrated ${!val ? 'active' : ''}"
-                            onclick="clearRating('${obj.id}')"
-                            style="width:auto;padding:0 8px;font-size:11px;">未評価</button>
+                    <button type="button" class="h-9 px-2 rounded-lg text-[11px] font-bold transition-all
+                        ${!val ? 'bg-ink/10 text-ink/60' : 'bg-cream text-ink/30'}"
+                        onclick="clearRating('${obj.id}')">未評価</button>
                 </div>
             </div>
         </div>`;
@@ -411,26 +377,32 @@ function renderRatedListIn(containerId, formId) {
 function changeRating(objectId, value, el) {
     selections[objectId] = value;
     saveToSession();
-    const group = el.closest('.rated-btn-group');
-    group.querySelectorAll('.rating-btn').forEach(btn => {
-        btn.classList.toggle('selected', parseInt(btn.dataset.value || btn.textContent.trim()) === value);
+    const group = el.closest('[data-obj-id]');
+    group.querySelectorAll('button[data-value]').forEach(btn => {
+        const v = parseInt(btn.dataset.value);
+        btn.className = v === value
+            ? 'w-9 h-9 rounded-lg text-sm font-bold transition-all bg-brand text-white'
+            : 'w-9 h-9 rounded-lg text-sm font-bold transition-all bg-cream text-ink/50';
     });
-    const unratedBtn = group.querySelector('.btn-unrated');
-    if (unratedBtn) unratedBtn.classList.remove('active');
+    const unratedBtn = group.querySelector('button:last-child');
+    if (unratedBtn) unratedBtn.className = 'h-9 px-2 rounded-lg text-[11px] font-bold transition-all bg-cream text-ink/30';
 }
 
 function clearRating(objectId) {
     delete selections[objectId];
     saveToSession();
-    document.querySelectorAll(`[onclick*="'${objectId}'"]`).forEach(btn => {
-        if (btn.classList.contains('rating-btn')) btn.classList.remove('selected');
-        if (btn.classList.contains('btn-unrated')) btn.classList.add('active');
+    document.querySelectorAll(`[data-obj-id="${objectId}"] button[data-value]`).forEach(btn => {
+        btn.className = 'w-9 h-9 rounded-lg text-sm font-bold transition-all bg-cream text-ink/50';
     });
+    const group = document.querySelector(`[data-obj-id="${objectId}"]`);
+    if (group) {
+        const unratedBtn = group.querySelector('button:last-child');
+        if (unratedBtn) unratedBtn.className = 'h-9 px-2 rounded-lg text-[11px] font-bold transition-all bg-ink/10 text-ink/60';
+    }
 }
 
 function buildFormInputs(formId) {
     const form = document.getElementById(formId);
-    // CSRFトークン以外のhidden inputを削除
     form.querySelectorAll('input[type=hidden]:not([name=csrf_token])').forEach(el => el.remove());
     Object.entries(selections).forEach(([id, val]) => {
         if (val) {
@@ -443,64 +415,45 @@ function buildFormInputs(formId) {
     });
 }
 
-function clearSession() {
-    try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
-}
-
-function submitRatings() {
-    buildFormInputs('rating-form');
-    clearSession();
-    document.getElementById('rating-form').submit();
-}
-
-function submitRatings2() {
-    buildFormInputs('rating-form2');
-    clearSession();
-    document.getElementById('rating-form2').submit();
-}
-
-function submitRatings3() {
-    buildFormInputs('rating-form3');
-    clearSession();
-    document.getElementById('rating-form3').submit();
-}
-
-function saveToSession() {
-    try {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(selections));
-    } catch(e) {}
-}
+function clearSession() { try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {} }
+function submitRatings()  { buildFormInputs('rating-form');  clearSession(); document.getElementById('rating-form').submit(); }
+function submitRatings2() { buildFormInputs('rating-form2'); clearSession(); document.getElementById('rating-form2').submit(); }
+function submitRatings3() { buildFormInputs('rating-form3'); clearSession(); document.getElementById('rating-form3').submit(); }
+function saveToSession()  { try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(selections)); } catch(e) {} }
 </script>
 
-
-<!-- グループコード入力モーダル -->
-<div class="logout-overlay" id="group-code-modal">
-    <div class="logout-card">
-        <div class="logout-card-title" style="color:#1565c0;">グループコード</div>
-        <div class="logout-card-msg">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</div>
-        <div id="group-error-msg" style="display:none;background:#ffebee;color:#c62828;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:10px;">このグループコードは存在しません。</div>
+<!-- グループコードモーダル -->
+<div class="fixed inset-0 bg-black/40 z-[10000] items-center justify-center hidden" id="group-code-modal">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-72 text-center">
+        <h3 class="text-lg font-bold text-blue-600 mb-2">グループコード</h3>
+        <p class="text-sm text-ink/50 mb-3">所属するグループのコードを入力してください。空欄で保存するとグループから外れます。</p>
+        <div id="group-error-msg" style="display:none" class="bg-red-50 text-red-600 text-xs p-2 rounded-lg mb-3">このグループコードは存在しません。</div>
         <form method="post" action="/set_group_code"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <input type="text" name="group_code" placeholder="グループコード"
-                value="{{ current_group_code or '' }}"
-                style="display:block;width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:14px;box-sizing:border-box;">
-            <div class="logout-card-actions">
-                <button type="button" class="btn-logout-cancel" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
-                <button type="submit" class="btn-logout-confirm" style="background:#1565c0;">保存</button>
+            <input type="text" name="group_code" placeholder="グループコード" value="{{ current_group_code or '' }}"
+                class="input input-bordered w-full mb-3 text-base" />
+            <div class="flex gap-2">
+                <button type="button" class="btn btn-ghost flex-1" onclick="document.getElementById('group-code-modal').classList.remove('open')">キャンセル</button>
+                <button type="submit" class="btn bg-blue-600 hover:bg-blue-700 text-white border-none flex-1">保存</button>
             </div>
         </form>
     </div>
 </div>
-<!-- ログアウト確認モーダル -->
-<div class="logout-overlay" id="logout-modal">
-    <div class="logout-card">
-        <div class="logout-card-title">ログアウト</div>
-        <div class="logout-card-msg">ログアウトしますか？</div>
-        <div class="logout-card-actions">
-            <button class="btn-logout-cancel" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
-            <form method="post" action="/logout" style="display:inline;margin:0;flex:1;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-logout-confirm" style="width:100%;">ログアウト</button></form>
+
+<!-- ログアウトモーダル -->
+<div class="fixed inset-0 bg-black/40 z-[10000] items-center justify-center hidden" id="logout-modal">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-72 text-center">
+        <h3 class="text-lg font-bold text-ink mb-2">ログアウト</h3>
+        <p class="text-sm text-ink/50 mb-5">ログアウトしますか？</p>
+        <div class="flex gap-2">
+            <button class="btn btn-ghost flex-1" onclick="document.getElementById('logout-modal').classList.remove('open')">キャンセル</button>
+            <form method="post" action="/logout" class="flex-1"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn bg-red-500 hover:bg-red-600 text-white border-none w-full">ログアウト</button></form>
         </div>
     </div>
 </div>
+
+<style>
+#group-code-modal.open, #logout-modal.open { display: flex !important; }
+</style>
 <script>if(new URLSearchParams(location.search).has('group_error')){document.getElementById('group-code-modal').classList.add('open');document.getElementById('group-error-msg').style.display='block';}</script>
 </body>
 </html>

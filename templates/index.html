@@ -1,65 +1,73 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Comic+Neue:wght@300;400;700&family=Yomogi&display=swap" rel="stylesheet">
     <title>{{ app_name }} ログイン</title>
-    <link rel="stylesheet" href="/static/style.css?v=20260320">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = { theme: { extend: { colors: {
+      brand: '#E07A5F', 'brand-dark': '#C85A42', sage: '#81B29A', 'sage-dark': '#5E9B80',
+      golden: '#F2CC8F', ink: '#3D405B', cream: '#FAF8F0',
+    }, animation: {
+      'fade-in': 'fadeIn 0.4s ease',
+    }, keyframes: {
+      fadeIn: { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } }
+    }}}}
+    </script>
 </head>
 <script>
-    // 3秒後にフラッシュメッセージを消す
     setTimeout(() => {
         let flashMessages = document.getElementById("flash-messages");
-        if (flashMessages) {
-            flashMessages.style.display = "none";
-        }
+        if (flashMessages) flashMessages.style.display = "none";
     }, 3000);
-
-    // ✅ ポップアップメッセージを表示する処理
     window.onload = function() {
         const alertMessages = JSON.parse('{{ messages | default([]) | tojson | safe }}');
-        if (alertMessages.length > 0) {
-            alert(alertMessages[0]);
-        }
+        if (alertMessages.length > 0) alert(alertMessages[0]);
     };
 </script>
-<body>
-    <div class="login-container">
-        <!-- イラスト画像 -->
-        <img src="/static/images/suidobashi.png" alt="ログインイラスト" class="login-illustration">
+<body class="bg-cream min-h-screen flex items-center justify-center p-4">
+    <div class="card bg-white shadow-xl w-full max-w-sm animate-fade-in">
+        <figure class="px-4 pt-4">
+            <img src="/static/images/suidobashi.png" alt="ログインイラスト" class="rounded-2xl w-full object-cover" />
+        </figure>
+        <div class="card-body items-center text-center pt-4">
+            <p class="text-sage text-sm font-bold tracking-wide">みんなで作る</p>
+            <h1 class="text-2xl font-extrabold text-ink leading-tight">{{ app_name }}</h1>
+            <p class="text-ink/50 text-sm mb-2">ログイン</p>
 
-        <div class="login-title">
-            <span class="title-small">みんなで作る</span>
-            <span class="title-large">{{ app_name }}</span>
-            <span class="title-normal">ログイン</span>
-        </div>
-
-         <!-- フラッシュメッセージ表示 -->
             {% if error_message %}
-            <div class="flash-messages">
-                <p class="error">{{ error_message }}</p>
+            <div class="alert bg-red-50 text-red-700 border border-red-200 text-sm py-2 mb-1">
+                <span>{{ error_message }}</span>
             </div>
-        {% endif %}
+            {% endif %}
 
-        <form method="post" action="/login" class="form-container"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <label for="username">ユーザー名:</label>
-            <input type="text" id="username" name="username" placeholder="ユーザー名" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます" autocomplete="username">
+            <form method="post" action="/login" class="w-full space-y-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="form-control">
+                    <label class="label pb-1"><span class="label-text text-ink/60 text-sm">ユーザー名</span></label>
+                    <input type="text" id="username" name="username" placeholder="ユーザー名" pattern="[a-zA-Z0-9]+" required title="英数字のみ使用できます" autocomplete="username"
+                           class="input input-bordered bg-cream/50 w-full focus:outline-none focus:border-brand text-base" />
+                </div>
+                <div class="form-control">
+                    <label class="label pb-1"><span class="label-text text-ink/60 text-sm">パスワード</span></label>
+                    <input type="password" id="password" name="password" placeholder="パスワード" required autocomplete="current-password"
+                           class="input input-bordered bg-cream/50 w-full focus:outline-none focus:border-brand text-base" />
+                </div>
+                <button type="submit" class="btn bg-brand hover:bg-brand-dark text-white border-none w-full text-base shadow-md shadow-brand/20 mt-1">ログイン</button>
+            </form>
 
-            <label for="password">パスワード:</label>
-            <input type="password" id="password" name="password" placeholder="パスワード" required autocomplete="current-password">
-            
-            <button type="submit" class="login-button">ログイン</button>
-        </form>
-        
-        
-        <p><a href="/register" class="register-button">新規ユーザー登録はこちら</a></p>
+            <div class="divider text-ink/30 text-xs my-2">または</div>
+
+            <a href="/register" class="btn btn-outline border-sage/50 text-sage hover:bg-sage hover:text-white hover:border-sage w-full">新規ユーザー登録</a>
+        </div>
     </div>
 
-<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#333;color:white;padding:14px 20px;font-size:13px;z-index:10000;text-align:center;line-height:1.6;">
-    このサイトではログイン機能のためにセッションCookieを使用しています。利用を続けることで同意したものとみなします。
-    <button onclick="document.getElementById('cookie-banner').style.display='none';localStorage.setItem('cookie_ok','1')" style="margin-left:12px;background:#2e7d32;color:white;border:none;padding:6px 16px;border-radius:6px;font-size:13px;cursor:pointer;">OK</button>
-</div>
-<script>if(!localStorage.getItem('cookie_ok'))document.getElementById('cookie-banner').style.display='block';</script>
+    <div id="cookie-banner" style="display:none" class="fixed bottom-0 left-0 right-0 bg-ink/90 backdrop-blur text-white py-3 px-5 text-xs text-center z-[10000] flex items-center justify-center gap-3">
+        このサイトではログイン機能のためにセッションCookieを使用しています。
+        <button onclick="document.getElementById('cookie-banner').style.display='none';localStorage.setItem('cookie_ok','1')" class="btn btn-xs bg-sage border-none text-white">OK</button>
+    </div>
+    <script>if(!localStorage.getItem('cookie_ok'))document.getElementById('cookie-banner').style.display='flex';</script>
 </body>
 </html>

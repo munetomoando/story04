@@ -137,14 +137,28 @@
                     </form>
                 </div>
                 {% else %}
-                <div class="flex gap-2 mt-3 items-center">
-                    <button type="button" class="btn btn-ghost btn-xs gap-1 {% if c.liked_by_me %}text-red-500{% else %}text-ink/30{% endif %} hover:text-red-400"
-                            id="like-btn-{{ c.review_id }}"
-                            onclick="toggleLike({{ c.review_id }})">
-                        <svg id="like-icon-{{ c.review_id }}" class="h-4 w-4" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="{% if c.liked_by_me %}currentColor{% else %}none{% endif %}"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
-                        <span id="like-count-{{ c.review_id }}" class="text-xs">{{ c.like_count if c.like_count else '' }}</span>
+                <div class="flex gap-1 mt-3 items-center flex-wrap">
+                    {% set rh = c.reactions.heart %}
+                    <button type="button" class="btn btn-ghost btn-xs gap-0.5 {% if rh.active %}text-red-500{% else %}text-ink/30{% endif %} hover:text-red-400"
+                            id="react-heart-{{ c.review_id }}" onclick="toggleReaction({{ c.review_id }},'heart')">
+                        <svg id="react-icon-heart-{{ c.review_id }}" class="h-3.5 w-3.5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="{% if rh.active %}currentColor{% else %}none{% endif %}"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
+                        <span id="react-count-heart-{{ c.review_id }}" class="text-xs">{{ rh.count if rh.count else '' }}</span>
                     </button>
-                    <button type="button" class="btn btn-ghost btn-xs text-ink/30 hover:text-ink/50"
+                    {% set rw = c.reactions.want_to_go %}
+                    <button type="button" class="btn btn-ghost btn-xs gap-0.5 {% if rw.active %}text-blue-500{% else %}text-ink/30{% endif %} hover:text-blue-400"
+                            id="react-want_to_go-{{ c.review_id }}" onclick="toggleReaction({{ c.review_id }},'want_to_go')">
+                        <svg id="react-icon-want_to_go-{{ c.review_id }}" class="h-3.5 w-3.5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="{% if rw.active %}currentColor{% else %}none{% endif %}"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
+                        <span class="text-[10px]">行きたい</span>
+                        <span id="react-count-want_to_go-{{ c.review_id }}" class="text-xs">{{ rw.count if rw.count else '' }}</span>
+                    </button>
+                    {% set ra = c.reactions.agree %}
+                    <button type="button" class="btn btn-ghost btn-xs gap-0.5 {% if ra.active %}text-amber-500{% else %}text-ink/30{% endif %} hover:text-amber-400"
+                            id="react-agree-{{ c.review_id }}" onclick="toggleReaction({{ c.review_id }},'agree')">
+                        <svg id="react-icon-agree-{{ c.review_id }}" class="h-3.5 w-3.5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="{% if ra.active %}currentColor{% else %}none{% endif %}"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                        <span class="text-[10px]">わかる</span>
+                        <span id="react-count-agree-{{ c.review_id }}" class="text-xs">{{ ra.count if ra.count else '' }}</span>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-xs text-ink/30 hover:text-ink/50 ml-1"
                             onclick="openReportModal({{ c.review_id }})">通報</button>
                 </div>
                 {% endif %}
@@ -212,21 +226,24 @@ L.marker([lat, lng]).addTo(map);
 </div>
 
 <script>
-async function toggleLike(reviewId) {
-    const btn = document.getElementById('like-btn-' + reviewId);
-    const icon = document.getElementById('like-icon-' + reviewId);
-    const countEl = document.getElementById('like-count-' + reviewId);
+const reactionColors = {heart: 'text-red-500', want_to_go: 'text-blue-500', agree: 'text-amber-500'};
+async function toggleReaction(reviewId, type) {
+    const btn = document.getElementById('react-' + type + '-' + reviewId);
+    const icon = document.getElementById('react-icon-' + type + '-' + reviewId);
+    const countEl = document.getElementById('react-count-' + type + '-' + reviewId);
     try {
         const formData = new FormData();
         formData.append('review_id', reviewId);
+        formData.append('reaction_type', type);
         formData.append('csrf_token', '{{ csrf_token }}');
-        const res = await fetch('/like_review', { method: 'POST', body: formData });
+        const res = await fetch('/react_review', { method: 'POST', body: formData });
         if (!res.ok) return;
         const data = await res.json();
         countEl.textContent = data.count || '';
-        icon.setAttribute('fill', data.liked ? 'currentColor' : 'none');
-        btn.className = btn.className.replace(/text-red-500|text-ink\/30/g, '');
-        btn.classList.add(data.liked ? 'text-red-500' : 'text-ink/30');
+        icon.setAttribute('fill', data.active ? 'currentColor' : 'none');
+        const color = reactionColors[type];
+        btn.className = btn.className.replace(new RegExp(color + '|text-ink\\/30', 'g'), '');
+        btn.classList.add(data.active ? color : 'text-ink/30');
     } catch(e) { /* ignore */ }
 }
 function openReportModal(reviewId) {

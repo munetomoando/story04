@@ -85,11 +85,12 @@ def init_db():
             object_id  INTEGER NOT NULL,
             viewed_at  TEXT    NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS review_likes (
-            review_id  INTEGER NOT NULL,
-            user_id    INTEGER NOT NULL,
-            created_at TEXT    NOT NULL,
-            PRIMARY KEY (review_id, user_id)
+        CREATE TABLE IF NOT EXISTS review_reactions (
+            review_id     INTEGER NOT NULL,
+            user_id       INTEGER NOT NULL,
+            reaction_type TEXT    NOT NULL DEFAULT 'heart',
+            created_at    TEXT    NOT NULL,
+            PRIMARY KEY (review_id, user_id, reaction_type)
         );
         CREATE TABLE IF NOT EXISTS review_reports (
             report_id  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -130,6 +131,20 @@ def init_db():
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError:
             pass  # カラムが既に存在する場合は無視
+
+    # review_likes → review_reactions マイグレーション
+    try:
+        conn.execute("SELECT 1 FROM review_likes LIMIT 1")
+        # 旧テーブルが存在 → データを移行して削除
+        conn.execute(
+            "INSERT OR IGNORE INTO review_reactions (review_id, user_id, reaction_type, created_at)"
+            " SELECT review_id, user_id, 'heart', created_at FROM review_likes"
+        )
+        conn.execute("DROP TABLE review_likes")
+        conn.commit()
+        logging.info("Migrated review_likes to review_reactions")
+    except sqlite3.OperationalError:
+        pass
 
     # 旧ユニークインデックスを削除（soft-delete 対応のため部分インデックスに移行）
     try:

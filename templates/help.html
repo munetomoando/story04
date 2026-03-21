@@ -12,6 +12,9 @@
       golden: '#F2CC8F', ink: '#3D405B', cream: '#FAF8F0',
     }}}}
     </script>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#E07A5F">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 </head>
 <body class="bg-cream min-h-screen pb-20">
 
@@ -168,5 +171,6 @@
 </div>
 <style>#group-code-modal.open, #logout-modal.open { display: flex !important; }</style>
 <script>if(new URLSearchParams(location.search).has('group_error')){document.getElementById('group-code-modal').classList.add('open');document.getElementById('group-error-msg').style.display='block';}</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 </html>

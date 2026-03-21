@@ -12,6 +12,9 @@
       golden: '#F2CC8F', ink: '#3D405B', cream: '#FAF8F0',
     }}}}
     </script>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#E07A5F">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 </head>
 <body class="bg-cream min-h-screen flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md">
@@ -137,5 +140,6 @@
     <button onclick="document.getElementById('cookie-banner').style.display='none';localStorage.setItem('cookie_ok','1')" class="ml-3 bg-brand hover:bg-brand-dark text-white border-none px-4 py-1.5 rounded-lg text-sm cursor-pointer">OK</button>
 </div>
 <script>if(!localStorage.getItem('cookie_ok'))document.getElementById('cookie-banner').style.display='block';</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 </html>

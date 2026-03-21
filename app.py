@@ -28,7 +28,7 @@ import base64
 import pathlib
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
-from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -368,6 +368,11 @@ object_dict = {}
 
 app.mount("/static/store_images", StaticFiles(directory=str(STORE_IMAGES_DIR)), name="store_images")
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
+
+@app.get("/sw.js")
+async def service_worker():
+    """Service Worker をルートパスで提供（PWAのスコープ要件）"""
+    return FileResponse("static/sw.js", media_type="application/javascript")
 
 def get_user_group_code(user_id) -> str:
     """ユーザーのグループコードを取得"""

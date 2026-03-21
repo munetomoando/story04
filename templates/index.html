@@ -16,6 +16,9 @@
       fadeIn: { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } }
     }}}}
     </script>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#E07A5F">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 </head>
 <script>
     setTimeout(() => {
@@ -69,5 +72,6 @@
         <button onclick="document.getElementById('cookie-banner').style.display='none';localStorage.setItem('cookie_ok','1')" class="btn btn-xs bg-sage border-none text-white">OK</button>
     </div>
     <script>if(!localStorage.getItem('cookie_ok'))document.getElementById('cookie-banner').style.display='flex';</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 </html>

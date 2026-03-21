@@ -2565,8 +2565,9 @@ def _dashboard_query_data(since_date, inactive_threshold_date):
         store_views = conn.execute(
             "SELECT pv.object_id, o.object_name, COUNT(*) as cnt "
             "FROM page_views pv JOIN objects o ON pv.object_id = o.object_id "
+            "WHERE DATE(pv.viewed_at) >= ? "
             "GROUP BY pv.object_id ORDER BY cnt DESC LIMIT ?",
-            (STORE_VIEWS_RANKING_LIMIT,)
+            (since_date, STORE_VIEWS_RANKING_LIMIT)
         ).fetchall()
 
         all_objects = conn.execute(

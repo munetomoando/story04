@@ -106,9 +106,9 @@
   <div class="alert-banner error">復元に失敗しました。ログを確認してください。</div>
   {% endif %}
 
-  <!-- ===== 利用状況トレンド ===== -->
-  <div class="section-title">利用状況トレンド（{{ period_label }}）</div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+  <!-- ===== 期間選択 ===== -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 20px;align-items:center;">
+    <span style="font-size:13px;font-weight:bold;color:#555;margin-right:4px;">表示期間:</span>
     {% for val, label in [('1','1日'),('7','1週間'),('30','30日'),('90','90日'),('180','180日'),('365','1年')] %}
     <a href="/admin/dashboard?period={{ val }}"
        style="padding:6px 14px;border-radius:8px;font-size:13px;font-weight:bold;text-decoration:none;
@@ -117,6 +117,9 @@
     </a>
     {% endfor %}
   </div>
+
+  <!-- ===== 利用状況トレンド ===== -->
+  <div class="section-title">利用状況トレンド（{{ period_label }}）</div>
   {% if chart_activity %}
     <img src="data:image/png;base64,{{ chart_activity }}" class="chart-img" alt="Activity">
   {% else %}
@@ -129,7 +132,7 @@
   {% endif %}
 
   <!-- ===== 店舗閲覧ランキング ===== -->
-  <div class="section-title">店舗カード閲覧ランキング</div>
+  <div class="section-title">店舗カード閲覧ランキング（{{ period_label }}）</div>
   {% if chart_store_views %}
     <img src="data:image/png;base64,{{ chart_store_views }}" class="chart-img" alt="Store Views">
   {% else %}

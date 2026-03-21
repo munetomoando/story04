@@ -152,12 +152,24 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # ジャンル名の変更マイグレーション
+    genre_renames = [
+        ("タイ・エスニック", "アジア料理"),
+        ("カフェ", "カフェ・ベーカリー"),
+    ]
+    for old_name, new_name in genre_renames:
+        cur = conn.execute("UPDATE genres SET name = ? WHERE name = ?", (new_name, old_name))
+        if cur.rowcount > 0:
+            conn.execute("UPDATE objects SET genre = ? WHERE genre = ?", (new_name, old_name))
+            conn.commit()
+            logging.info(f"Renamed genre '{old_name}' -> '{new_name}'")
+
     # ジャンルの初期データ投入（テーブルが空の場合のみ）
     if conn.execute("SELECT COUNT(*) FROM genres").fetchone()[0] == 0:
         default_genres = [
             "和食", "洋食", "中華", "イタリアン", "カレー", "ラーメン",
             "蕎麦・うどん", "寿司", "焼肉・韓国料理", "定食・食堂",
-            "ファストフード", "カフェ", "タイ・エスニック", "居酒屋", "その他",
+            "ファストフード", "カフェ・ベーカリー", "アジア料理", "居酒屋", "その他",
         ]
         conn.executemany(
             "INSERT INTO genres (name, sort_order) VALUES (?, ?)",

@@ -32,7 +32,6 @@ import threading
 
 # ジャンル加重パラメータ
 GENRE_SIM_ALPHA = 0.3   # 類似度ブレンド比率（0=店舗のみ, 1=ジャンルのみ）
-GENRE_BOOST_BETA = 0.3  # スコアへのジャンル適合度ブースト係数
 
 # グローバル変数
 user_object_matrix = pd.DataFrame()
@@ -262,7 +261,7 @@ def recommend_for_all_users(threshold=0.3):
     with np.errstate(divide='ignore', invalid='ignore'):
         scores = np.where(weight_sum > 0, weighted_sum / weight_sum, 0)
 
-    # 未評価のもののみ結果として抽出（ジャンル適合度ブースト付き）
+    # 未評価のもののみ結果として抽出
     user_ids = user_zscore_matrix.index.values
     object_ids = user_zscore_matrix.columns.values
 
@@ -270,10 +269,7 @@ def recommend_for_all_users(threshold=0.3):
     for i, uid in enumerate(user_ids):
         for j, oid in enumerate(object_ids):
             if unrated_mask[i, j]:
-                base_score = float(scores[i, j])
-                affinity = _get_user_genre_affinity(uid, oid)
-                boosted = base_score * (1 + GENRE_BOOST_BETA * affinity)
-                rows.append((uid, oid, round(boosted, 2)))
+                rows.append((uid, oid, round(float(scores[i, j]), 2)))
 
     result_df = pd.DataFrame(rows, columns=["user_id", "object_id", "recommendation_score"])
     return result_df, user_similarity
@@ -316,13 +312,11 @@ def recommend_for_single_user(target_user_id, threshold=0.3):
         scores = np.where(weight_sum > 0, weighted_sum / weight_sum, 0)
 
     object_ids = user_zscore_matrix.columns.values
-    rows = []
-    for j, oid in enumerate(object_ids):
-        if target_unrated[j]:
-            base_score = float(scores[j])
-            affinity = _get_user_genre_affinity(target_user_id, oid)
-            boosted = base_score * (1 + GENRE_BOOST_BETA * affinity)
-            rows.append((target_user_id, oid, round(boosted, 2)))
+    rows = [
+        (target_user_id, oid, round(float(scores[j]), 2))
+        for j, oid in enumerate(object_ids)
+        if target_unrated[j]
+    ]
 
     return pd.DataFrame(rows, columns=["user_id", "object_id", "recommendation_score"])
 

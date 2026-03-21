@@ -86,7 +86,7 @@
                 <div class="flex-shrink-0 w-7 h-7 rounded-full bg-brand text-white text-sm font-bold flex items-center justify-center">4</div>
                 <div class="flex-1 text-sm text-ink/70 leading-relaxed pt-0.5">
                     <strong>おすすめスコアを計算</strong><br>
-                    あなたが未評価の各お店について、好みが近いユーザーの評価を「類似度で重みづけした平均」として算出します。さらに、そのお店のジャンルがあなたの好みに合っている場合はスコアが上乗せされます。例えば、あなたがラーメン店を普段高く評価していれば、未評価のラーメン店のスコアが高くなります。
+                    あなたが未評価の各お店について、好みが近いユーザーの評価を「類似度で重みづけした平均」として算出します。ステップ2でジャンルの好みが類似度に組み込まれているため、あなたと同じジャンルを好むユーザーの評価がより強く反映されます。
                 </div>
             </div>
 
@@ -97,11 +97,10 @@
                         <span class="block w-full border-t border-brand my-0.5"></span>
                         <span>Σ(類似度)</span>
                     </div>
-                    <span>× ジャンル補正</span>
                 </div>
                 <div class="mt-2 text-xs text-ink/40">
                     ※ 好みが近いユーザーのうち、そのお店を評価済みのユーザーのみで計算<br>
-                    ※ ジャンル補正：あなたが好むジャンルのお店ほどスコアが高くなります
+                    ※ 類似度にはお店の評価パターンとジャンル嗜好の両方が反映されています
                 </div>
             </div>
 

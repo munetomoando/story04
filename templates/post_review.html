@@ -51,12 +51,26 @@
                 <label for="object_id" class="block text-sm font-bold text-brand mb-1">店舗を選択</label>
                 <select name="object_id" id="object_id" class="select select-bordered bg-cream/50 focus:outline-none focus:border-brand w-full mb-4" required>
                     <option value="" disabled {% if not selected_object_id %}selected{% endif %}>店舗を選んでください</option>
-                    {% for obj in objects %}
-                    <option value="{{ obj.object_id }}"
-                        {% if obj.object_id == selected_object_id %}selected{% endif %}>
-                        {{ obj.object_name }}
-                    </option>
+                    {% for genre, stores in unreviewd_by_genre.items() %}
+                    <optgroup label="{{ genre }}">
+                        {% for obj in stores %}
+                        <option value="{{ obj.object_id }}"
+                            {% if obj.object_id == selected_object_id %}selected{% endif %}>
+                            {{ obj.object_name }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
                     {% endfor %}
+                    {% if reviewed_list %}
+                    <optgroup label="✏️ 投稿済み（編集）">
+                        {% for obj in reviewed_list %}
+                        <option value="{{ obj.object_id }}"
+                            {% if obj.object_id == selected_object_id %}selected{% endif %}>
+                            {{ obj.object_name }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
                 </select>
 
                 <label for="comment" class="block text-sm font-bold text-brand mb-1">コメント</label>

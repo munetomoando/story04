@@ -1005,7 +1005,12 @@ async def show_post_review_page(request: Request, object_id: str = ""):
 
     with get_db() as conn:
         obj_rows = conn.execute(
-            "SELECT object_id, object_name FROM objects ORDER BY object_id ASC"
+            "SELECT o.object_id, o.object_name, COALESCE(o.genre, '') AS genre,"
+            " CASE WHEN r.review_id IS NOT NULL THEN 1 ELSE 0 END AS has_review"
+            " FROM objects o"
+            " LEFT JOIN reviews r ON o.object_id = r.object_id AND r.user_id = ? AND r.deleted_at IS NULL"
+            " ORDER BY o.object_name ASC",
+            (int(user_id),)
         ).fetchall()
 
         # 選択された店舗に既存口コミがあるか確認
@@ -1018,13 +1023,23 @@ async def show_post_review_page(request: Request, object_id: str = ""):
             if row:
                 existing_comment = row["comment"]
 
-    objects_list = [{"object_id": str(r["object_id"]), "object_name": r["object_name"]} for r in obj_rows]
+    # 未投稿をジャンル別にグループ化、投稿済みは別グループ
+    unreviewd_by_genre: dict[str, list] = {}
+    reviewed_list: list[dict] = []
+    for r in obj_rows:
+        item = {"object_id": str(r["object_id"]), "object_name": r["object_name"]}
+        if r["has_review"]:
+            reviewed_list.append(item)
+        else:
+            genre = r["genre"] or "その他"
+            unreviewd_by_genre.setdefault(genre, []).append(item)
 
     return templates.TemplateResponse("post_review.html", {
         "request": request,
         "username": username,
         "current_group_code": get_user_group_code(request.session.get("user_id")),
-        "objects": objects_list,
+        "unreviewd_by_genre": unreviewd_by_genre,
+        "reviewed_list": reviewed_list,
         "selected_object_id": object_id,
         "existing_comment": existing_comment,
     })

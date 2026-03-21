@@ -128,11 +128,11 @@
                 </div>
                 <div class="text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">{{ c.comment }}</div>
                 {% if c.is_mine %}
-                <div class="flex gap-2 mt-3">
-                    <a href="/edit_review/{{ c.review_id }}" class="btn btn-outline btn-xs border-sage text-sage-dark hover:bg-sage/10 hover:border-sage">編集</a>
-                    <form method="post" action="/delete_review" class="m-0"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="flex gap-2 mt-3 items-center">
+                    <a href="/edit_review/{{ c.review_id }}" class="btn btn-outline btn-xs border-sage text-sage-dark hover:bg-sage/10 hover:border-sage leading-none">編集</a>
+                    <form method="post" action="/delete_review" class="m-0 flex"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="review_id" value="{{ c.review_id }}">
-                        <button type="submit" class="btn btn-outline btn-xs border-red-300 text-red-400 hover:bg-red-50 hover:border-red-300"
+                        <button type="submit" class="btn btn-outline btn-xs border-red-300 text-red-400 hover:bg-red-50 hover:border-red-300 leading-none"
                                 onclick="return confirm('この口コミを削除しますか？')">削除</button>
                     </form>
                 </div>

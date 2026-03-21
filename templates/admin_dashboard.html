@@ -253,6 +253,46 @@
     </form>
   </div>
 
+  <!-- ===== 管理者パスワード変更 ===== -->
+  <div class="section-title">管理者パスワード変更</div>
+  {% if request.query_params.get('pw_changed') %}
+  <div class="alert-banner success" style="margin-bottom:12px;">管理者パスワードを変更しました。</div>
+  {% endif %}
+  {% if request.query_params.get('pw_error') == 'wrong' %}
+  <div class="alert-banner error" style="margin-bottom:12px;">現在のパスワードが正しくありません。</div>
+  {% elif request.query_params.get('pw_error') == 'mismatch' %}
+  <div class="alert-banner error" style="margin-bottom:12px;">新しいパスワードが一致しません。</div>
+  {% elif request.query_params.get('pw_error') == 'weak' %}
+  <div class="alert-banner error" style="margin-bottom:12px;">パスワードは8文字以上で、英字・数字・記号(@$!%*#?&)を各1つ以上含めてください。</div>
+  {% elif request.query_params.get('pw_error') == 'same' %}
+  <div class="alert-banner error" style="margin-bottom:12px;">新しいパスワードが現在のパスワードと同じです。</div>
+  {% endif %}
+  <div class="ops-card">
+    <div class="ops-title">パスワードの変更</div>
+    <div style="font-size:12px;color:#888;margin-bottom:10px;line-height:1.6;">
+      管理者のログインパスワードを変更します。8文字以上で、英字・数字・記号(@$!%*#?&)をそれぞれ1つ以上含めてください。
+    </div>
+    <form method="post" action="/admin/change_pw" style="display:flex;flex-direction:column;gap:10px;max-width:360px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <label style="font-size:12px;font-weight:bold;color:#333;display:block;margin-bottom:4px;">現在のパスワード</label>
+        <input type="password" name="current_password" required autocomplete="current-password"
+               style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;width:100%;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:bold;color:#333;display:block;margin-bottom:4px;">新しいパスワード</label>
+        <input type="password" name="new_password" required autocomplete="new-password"
+               style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;width:100%;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:bold;color:#333;display:block;margin-bottom:4px;">新しいパスワード（確認）</label>
+        <input type="password" name="new_password_confirm" required autocomplete="new-password"
+               style="padding:8px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;width:100%;box-sizing:border-box;">
+      </div>
+      <button type="submit" style="background:#2e7d32;color:white;border:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer;align-self:flex-start;">パスワードを変更</button>
+    </form>
+  </div>
+
   <!-- ===== バックアップ・リストア ===== -->
   <div class="backup-section">
     <div class="section-title">バックアップ・リストア</div>

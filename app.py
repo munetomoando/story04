@@ -2729,6 +2729,39 @@ async def admin_set_invite_code(request: Request, invite_code: str = Form("")):
     return RedirectResponse(url="/admin/dashboard?invite_updated=1", status_code=303)
 
 
+@app.post("/admin/change_pw")
+@limiter.limit("5/minute")
+async def admin_change_pw(
+    request: Request,
+    current_pw: str = Form(..., alias="current_password"),
+    new_pw: str = Form(..., alias="new_password"),
+    new_pw_confirm: str = Form(..., alias="new_password_confirm"),
+):
+    """Admin credential update"""
+    global ADMIN_PASSWORD_HASH
+    import re as _re
+
+    if not bcrypt.checkpw(current_pw.encode(), ADMIN_PASSWORD_HASH.encode()):
+        return RedirectResponse(url="/admin/dashboard?pw_error=wrong", status_code=303)
+
+    if new_pw != new_pw_confirm:
+        return RedirectResponse(url="/admin/dashboard?pw_error=mismatch", status_code=303)
+
+    if current_pw == new_pw:
+        return RedirectResponse(url="/admin/dashboard?pw_error=same", status_code=303)
+
+    if len(new_pw) < 8 or not _re.search(r'[A-Za-z]', new_pw) or not _re.search(r'\d', new_pw) or not _re.search(r'[@$!%*#?&]', new_pw):
+        return RedirectResponse(url="/admin/dashboard?pw_error=weak", status_code=303)
+
+    pw_hash = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
+    _hash_file = DATA_DIR / ".admin_password_hash"
+    _hash_file.write_text(pw_hash)
+    ADMIN_PASSWORD_HASH = pw_hash
+    logging.info("Admin credential updated via dashboard")
+
+    return RedirectResponse(url="/admin/dashboard?pw_changed=1", status_code=303)
+
+
 @app.get("/admin/backup")
 async def admin_backup():
     """DB と店舗画像を ZIP にまとめてダウンロード"""

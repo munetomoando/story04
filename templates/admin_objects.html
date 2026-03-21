@@ -357,7 +357,7 @@ function confirmLocation() {
     form.method = 'POST';
     form.action = '/admin/objects/set_location';
 
-    [['object_id', currentObjectId], ['latitude', pickedLat], ['longitude', pickedLng]].forEach(([name, value]) => {
+    [['csrf_token', '{{ csrf_token }}'], ['object_id', currentObjectId], ['latitude', pickedLat], ['longitude', pickedLng]].forEach(([name, value]) => {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = name;

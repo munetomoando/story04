@@ -1008,9 +1008,10 @@ async def show_post_review_page(request: Request, object_id: str = ""):
             "SELECT o.object_id, o.object_name, COALESCE(o.genre, '') AS genre,"
             " CASE WHEN r.review_id IS NOT NULL THEN 1 ELSE 0 END AS has_review"
             " FROM objects o"
+            " INNER JOIN ratings rt ON o.object_id = rt.object_id AND rt.user_id = ?"
             " LEFT JOIN reviews r ON o.object_id = r.object_id AND r.user_id = ? AND r.deleted_at IS NULL"
             " ORDER BY o.object_name ASC",
-            (int(user_id),)
+            (int(user_id), int(user_id))
         ).fetchall()
 
         # 選択された店舗に既存口コミがあるか確認
@@ -1065,6 +1066,14 @@ async def submit_review(request: Request, object_id: str = Form(...), comment: s
     try:
         now = datetime.datetime.now().isoformat()
         with get_db() as conn:
+            # 評価済みの店舗のみ口コミ投稿可
+            rated = conn.execute(
+                "SELECT 1 FROM ratings WHERE user_id = ? AND object_id = ?",
+                (int(user_id), int(object_id))
+            ).fetchone()
+            if not rated:
+                return RedirectResponse(url="/post_review", status_code=303)
+
             existing = conn.execute(
                 "SELECT review_id FROM reviews WHERE user_id = ? AND object_id = ? AND deleted_at IS NULL",
                 (int(user_id), int(object_id))

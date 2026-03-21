@@ -1333,6 +1333,8 @@ async def recommendations_page(request: Request):
         exp = explanations.get(str(rec["object_id"]), {})
         rec["reason"] = exp.get("reason", "")
         rec["sub_reason"] = exp.get("sub_reason", "")
+        rec["genre"] = exp.get("genre", "")
+        rec["genre_note"] = exp.get("genre_note", "")
 
     popular_objects = get_popular_objects()
 

@@ -43,7 +43,7 @@
     <section class="mb-6">
         <h2 class="text-lg font-bold text-ink mb-3">あなたへのおすすめ</h2>
         <div class="bg-sage/10 border border-sage/30 rounded-xl p-3 text-sm text-sage-dark mb-4">
-            あなたと好みが似ているユーザーの評価をもとにおすすめしています。
+            あなたと好みが似ているユーザーの評価と、あなたのジャンル嗜好をもとにおすすめしています。
         </div>
 
         {% if recommendations %}
@@ -51,13 +51,19 @@
             {% for rec in recommendations %}
             <a href="/store/{{ rec.object_id }}" class="block bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md active:scale-[0.98] transition-all overflow-hidden">
                 <div class="p-4 flex items-center gap-3">
-                    <div class="flex-1">
-                        <div class="font-bold text-ink">{{ rec.object_name }}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-ink">{{ rec.object_name }}</span>
+                            {% if rec.genre %}<span class="inline-block px-1.5 py-0.5 text-[10px] font-medium rounded bg-sage/15 text-sage-dark border border-sage/25 whitespace-nowrap">{{ rec.genre }}</span>{% endif %}
+                        </div>
                         {% if rec.reason %}
                         <div class="text-xs text-ink/70 mt-1 leading-relaxed">
                             {{ rec.reason }}
                             {% if rec.sub_reason %}<br><span class="text-ink/50">{{ rec.sub_reason }}</span>{% endif %}
                         </div>
+                        {% endif %}
+                        {% if rec.genre_note %}
+                        <div class="text-[11px] text-sage-dark mt-1">{{ rec.genre_note }}</div>
                         {% endif %}
                     </div>
                     <div class="text-right flex-shrink-0">

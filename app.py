@@ -1045,7 +1045,7 @@ async def show_post_review_page(request: Request, object_id: str = ""):
 
         # 自分の口コミが受け取ったいいね数を取得
         my_reviews_likes = conn.execute(
-            "SELECT rv.review_id, o.object_name, rv.comment, COUNT(rl.user_id) as like_count"
+            "SELECT rv.review_id, rv.object_id, o.object_name, rv.comment, COUNT(rl.user_id) as like_count"
             " FROM reviews rv"
             " JOIN objects o ON rv.object_id = o.object_id"
             " LEFT JOIN review_likes rl ON rv.review_id = rl.review_id"
@@ -1055,7 +1055,7 @@ async def show_post_review_page(request: Request, object_id: str = ""):
             (int(user_id),)
         ).fetchall()
         my_reviews_with_likes = [
-            {"object_name": r["object_name"], "comment": r["comment"][:50], "like_count": r["like_count"]}
+            {"object_id": str(r["object_id"]), "object_name": r["object_name"], "comment": r["comment"][:50], "like_count": r["like_count"]}
             for r in my_reviews_likes
         ]
 

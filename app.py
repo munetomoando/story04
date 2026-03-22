@@ -2063,6 +2063,24 @@ async def set_object_location(
     return RedirectResponse(url="/admin/objects", status_code=303)
 
 
+@app.post("/admin/objects/add")
+async def admin_add_object(object_name: str = Form(...)):
+    """管理者による店舗の直接追加"""
+    name = object_name.strip()
+    if not name:
+        return RedirectResponse(url="/admin/objects?add_error=empty", status_code=303)
+    with get_db() as conn:
+        existing = conn.execute("SELECT 1 FROM objects WHERE object_name = ?", (name,)).fetchone()
+        if existing:
+            return RedirectResponse(url="/admin/objects?add_error=exists", status_code=303)
+        conn.execute("INSERT INTO objects (object_name) VALUES (?)", (name,))
+        new_row = conn.execute("SELECT object_id FROM objects WHERE object_name = ?", (name,)).fetchone()
+        if new_row:
+            object_dict[str(new_row["object_id"])] = name
+            logging.info(f"Admin added store: '{name}' (id={new_row['object_id']})")
+    return RedirectResponse(url=f"/admin/objects?added={name}", status_code=303)
+
+
 @app.post("/admin/objects/rename")
 async def rename_object(object_id: str = Form(...), new_name: str = Form(...)):
     """店舗名を変更"""

@@ -178,6 +178,25 @@
   <p class="empty-msg">承認待ちのリクエストはありません。</p>
   {% endif %}
 
+  <!-- ===== 店舗を追加 ===== -->
+  <div class="section-title">店舗を追加</div>
+  {% if request.query_params.get('add_error') == 'empty' %}
+  <p style="color:#c62828;font-size:13px;margin-bottom:8px;">店舗名を入力してください。</p>
+  {% elif request.query_params.get('add_error') == 'exists' %}
+  <p style="color:#c62828;font-size:13px;margin-bottom:8px;">同じ名前の店舗が既に登録されています。</p>
+  {% elif request.query_params.get('added') %}
+  <p style="color:#2e7d32;font-size:13px;margin-bottom:8px;">「{{ request.query_params.get('added') }}」を追加しました。</p>
+  {% endif %}
+  <form method="post" action="/admin/objects/add" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div style="flex:1;min-width:200px;">
+      <label style="font-size:12px;font-weight:bold;color:#333;display:block;margin-bottom:4px;">店舗名</label>
+      <input type="text" name="object_name" placeholder="店舗名を入力" required
+             style="width:100%;padding:8px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;box-sizing:border-box;">
+    </div>
+    <button type="submit" class="btn-approve" style="height:38px;">追加</button>
+  </form>
+
   <!-- ===== 登録済み店舗 ===== -->
   <div class="section-title">登録済み店舗（{{ objects | length }}件）</div>
   <div class="store-grid">

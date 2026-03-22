@@ -38,6 +38,11 @@
         <div class="card-body items-center text-center pt-4">
             <p class="text-sage text-sm font-bold tracking-wide">みんなで作る</p>
             <h1 class="text-2xl font-extrabold text-ink leading-tight">{{ app_name }}</h1>
+            <div class="bg-golden/20 rounded-xl px-4 py-2 mt-1 mb-1">
+                <span class="text-ink/60 text-xs">現在</span>
+                <span class="text-brand text-2xl font-extrabold mx-1">{{ store_count }}</span>
+                <span class="text-ink/60 text-xs">店舗のグルメ情報を掲載中</span>
+            </div>
             <p class="text-ink/50 text-sm mb-2">ログイン</p>
 
             {% if error_message %}

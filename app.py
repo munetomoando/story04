@@ -112,7 +112,7 @@ async def login_page(request: Request, error_message: str = ""):
     user = request.session.get("user_id")
     if user:
         return RedirectResponse(url=f"/rating", status_code=303)
-    return templates.TemplateResponse("index.html", {"request": request, "error_message": error_message})
+    return templates.TemplateResponse("index.html", {"request": request, "error_message": error_message, "store_count": len(object_dict)})
 
 # 管理者認証情報（環境変数 → ファイル の順に読み込み）
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
@@ -517,14 +517,16 @@ async def login(request: Request, username: str = Form(...), password: str = For
     if row is None:
         return templates.TemplateResponse("index.html", {
             "request": request,
-            "error_message": "ユーザー名が存在しません。"
+            "error_message": "ユーザー名が存在しません。",
+            "store_count": len(object_dict),
         })
 
     # 凍結ユーザーのログインを拒否
     if row["status"] == "banned":
         return templates.TemplateResponse("index.html", {
             "request": request,
-            "error_message": "このアカウントは利用できません。"
+            "error_message": "このアカウントは利用できません。",
+            "store_count": len(object_dict),
         })
 
     try:
@@ -534,7 +536,8 @@ async def login(request: Request, username: str = Form(...), password: str = For
     if not pw_ok:
         return templates.TemplateResponse("index.html", {
             "request": request,
-            "error_message": "パスワードが間違っています。"
+            "error_message": "パスワードが間違っています。",
+            "store_count": len(object_dict),
         })
 
     request.session["username"] = row["username"]
@@ -574,7 +577,7 @@ app.include_router(router)
 @app.get("/index")
 async def show_index_page(request: Request):
     """ 明示的に index.html を表示するルート """
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {"request": request, "store_count": len(object_dict)})
 
 
 @app.get("/objects")

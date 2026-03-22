@@ -329,25 +329,6 @@ function applyLayout() {
     });
 }
 
-function spreadOverlapping(data) {
-    const OFFSET_LNG = 0.00012;
-    const key = (lat, lng) => lat.toFixed(5) + ',' + lng.toFixed(5);
-    const groups = {};
-    data.forEach(obj => {
-        const k = key(obj.latitude, obj.longitude);
-        if (!groups[k]) groups[k] = [];
-        groups[k].push(obj);
-    });
-    const result = [];
-    Object.values(groups).forEach(group => {
-        const n = group.length;
-        group.forEach((obj, i) => {
-            const offset = (i - (n - 1) / 2) * OFFSET_LNG;
-            result.push({ ...obj, spreadLat: obj.latitude, spreadLng: obj.longitude + offset });
-        });
-    });
-    return result;
-}
 
 function openStore(idx) {
     window.location.href = '/store/' + allEntries[idx].obj.object_id;
@@ -403,11 +384,10 @@ fetch('/api/objects/locations')
 
         buildGenreButtons(data);
 
-        const spread = spreadOverlapping(data);
         const bounds = [];
 
-        spread.forEach((obj, idx) => {
-            const latlng = [obj.spreadLat, obj.spreadLng];
+        data.forEach((obj, idx) => {
+            const latlng = [obj.latitude, obj.longitude];
             bounds.push(latlng);
             const marker = L.marker(latlng, {
                 icon: createIcon(obj.object_name, 'top', STEM_DEFAULT),

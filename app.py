@@ -1469,12 +1469,22 @@ async def recommendations_page(request: Request):
 
     popular_objects = get_popular_objects()
 
+    # 全店評価済みかどうかを判定
+    all_rated = False
+    with get_db() as conn:
+        total_objects = conn.execute("SELECT COUNT(*) as c FROM objects").fetchone()["c"]
+        rated_count = conn.execute(
+            "SELECT COUNT(*) as c FROM ratings WHERE user_id = ?", (int(user_id),)
+        ).fetchone()["c"]
+        all_rated = (rated_count >= total_objects)
+
     return templates.TemplateResponse("recommendations.html", {
         "request": request,
         "username": username,
         "current_group_code": get_user_group_code(request.session.get("user_id")),
         "recommendations": rec_list,
         "popular_objects": popular_objects,
+        "all_rated": all_rated,
     })
 
 

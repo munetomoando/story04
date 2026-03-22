@@ -80,9 +80,14 @@
         </div>
         {% else %}
         <div class="text-center py-10 text-ink/40">
+            {% if all_rated %}
+            <p class="mb-2">すべての店舗を評価済みです！</p>
+            <p class="text-sm mb-4">新しい店舗が追加されるとおすすめが表示されます。</p>
+            {% else %}
             <p class="mb-2">まだおすすめがありません。</p>
             <p class="text-sm mb-4">もっと評価を追加するとおすすめが表示されます。</p>
             <a href="/rating" class="btn bg-brand hover:bg-brand-dark text-white border-none shadow-md shadow-brand/20">評価ページへ</a>
+            {% endif %}
         </div>
         {% endif %}
     </section>

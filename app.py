@@ -2678,22 +2678,35 @@ async def admin_logout(request: Request):
     return RedirectResponse(url="/admin/login", status_code=303)
 
 
-def _make_ts_chart(datasets, title, ylabel):
+def _make_ts_chart(datasets, title, ylabel, since_date_str, num_days):
     """時系列折れ線グラフを Base64 PNG として生成"""
+    import matplotlib.dates as mdates
+
+    # 期間内の全日付を生成
+    start_date = datetime.date.fromisoformat(since_date_str)
+    all_dates = [start_date + datetime.timedelta(days=i) for i in range(num_days + 1)]
+
     fig, ax = plt.subplots(figsize=(10, 3.5))
     for label, rows, color in datasets:
-        if rows:
-            days_list = [r["day"] for r in rows]
-            counts = [r["cnt"] for r in rows]
-            ax.plot(days_list, counts, marker='o', markersize=4, label=label, color=color, linewidth=2)
+        # データを日付→件数の辞書に変換し、欠損日は0で埋める
+        data_map = {r["day"]: r["cnt"] for r in rows} if rows else {}
+        counts = [data_map.get(d.isoformat(), 0) for d in all_dates]
+        ax.plot(all_dates, counts, marker='o', markersize=4, label=label, color=color, linewidth=2)
     ax.set_title(title, fontsize=14)
     ax.set_ylabel(ylabel, fontsize=11)
     ax.legend(fontsize=10)
     ax.grid(True, alpha=0.3)
-    if ax.get_xlim()[1] - ax.get_xlim()[0] > 10:
-        ax.tick_params(axis='x', rotation=45, labelsize=9)
+    # 期間に応じた日付フォーマットと間隔を設定
+    if num_days <= 7:
+        ax.xaxis.set_major_locator(mdates.DayLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
+    elif num_days <= 90:
+        ax.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
     else:
-        ax.tick_params(axis='x', rotation=45, labelsize=10)
+        ax.xaxis.set_major_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m'))
+    ax.tick_params(axis='x', rotation=45, labelsize=9)
     plt.tight_layout()
     buf = BytesIO()
     plt.savefig(buf, format='png', dpi=100)
@@ -2862,13 +2875,13 @@ async def admin_dashboard(request: Request, period: str = "30"):
         chart_activity = _make_ts_chart([
             ('Active Users', data["active_users"], '#1565c0'),
             ('Card Views', data["daily_views"], '#2e7d32'),
-        ], 'Daily Active Users & Card Views', 'Count')
+        ], 'Daily Active Users & Card Views', 'Count', since_date, days)
 
         chart_content = _make_ts_chart([
             ('Ratings', data["daily_ratings"], '#f59e0b'),
             ('Reviews', data["daily_reviews"], '#e65100'),
             ('New Users', data["new_users"], '#1565c0'),
-        ], 'Daily Ratings, Reviews & New Users', 'Count')
+        ], 'Daily Ratings, Reviews & New Users', 'Count', since_date, days)
 
         chart_store_views = _make_bar_chart(data["store_views"], 'Store Card Views Ranking')
         _set_cached(cache_key, (chart_activity, chart_content, chart_store_views))

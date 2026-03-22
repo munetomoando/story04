@@ -2063,6 +2063,24 @@ async def set_object_location(
     return RedirectResponse(url="/admin/objects", status_code=303)
 
 
+@app.post("/admin/objects/rename")
+async def rename_object(object_id: str = Form(...), new_name: str = Form(...)):
+    """店舗名を変更"""
+    try:
+        oid = int(object_id)
+    except (ValueError, TypeError):
+        return RedirectResponse(url="/admin/objects", status_code=303)
+    new_name = new_name.strip()
+    if not new_name:
+        return RedirectResponse(url="/admin/objects", status_code=303)
+    try:
+        with get_db() as conn:
+            conn.execute("UPDATE objects SET object_name = ? WHERE object_id = ?", (new_name, oid))
+    except Exception as e:
+        logging.warning(f"rename_object failed: {e}")
+    return RedirectResponse(url="/admin/objects", status_code=303)
+
+
 @app.post("/admin/objects/set_genre")
 async def set_object_genre(object_id: str = Form(...), genre: str = Form("")):
     """店舗のジャンルを設定"""

@@ -193,7 +193,19 @@
       </div>
 
       <div class="store-info">
-        <div class="store-name">{{ obj.object_name }}</div>
+        <div class="store-name" id="name-display-{{ obj.object_id }}">{{ obj.object_name }}
+          <button type="button" style="background:none;border:none;cursor:pointer;font-size:12px;color:#888;vertical-align:middle;padding:0 2px;" title="店舗名を変更"
+                  onclick="toggleNameEdit('{{ obj.object_id }}')">✏️</button>
+        </div>
+        <form method="post" action="/admin/objects/rename" id="name-edit-{{ obj.object_id }}" style="display:none;margin-bottom:8px;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="object_id" value="{{ obj.object_id }}">
+          <input type="text" name="new_name" value="{{ obj.object_name }}" style="width:100%;padding:4px 6px;font-size:13px;border:1px solid #ccc;border-radius:4px;margin-bottom:4px;box-sizing:border-box;">
+          <div style="display:flex;gap:4px;">
+            <button type="submit" style="flex:1;background:#2e7d32;color:white;border:none;padding:5px;border-radius:4px;font-size:12px;cursor:pointer;">保存</button>
+            <button type="button" style="flex:1;background:#f5f5f5;color:#333;border:1px solid #ccc;padding:5px;border-radius:4px;font-size:12px;cursor:pointer;" onclick="toggleNameEdit('{{ obj.object_id }}')">取消</button>
+          </div>
+        </form>
         <div class="store-id">ID: {{ obj.object_id }}{% if obj.genre %} / {{ obj.genre }}{% endif %}</div>
       </div>
 
@@ -370,6 +382,15 @@ function confirmLocation() {
 }
 
 // --- 削除確認モーダル ---
+function toggleNameEdit(objectId) {
+    const display = document.getElementById('name-display-' + objectId);
+    const edit = document.getElementById('name-edit-' + objectId);
+    const isHidden = edit.style.display === 'none';
+    display.style.display = isHidden ? 'none' : 'block';
+    edit.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) edit.querySelector('input[name="new_name"]').focus();
+}
+
 function openDeleteModal(objectId, objectName) {
     document.getElementById('del-store-name').textContent = objectName;
     document.getElementById('del-object-id').value = objectId;

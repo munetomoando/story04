@@ -2025,7 +2025,7 @@ async def submit_request_object(request: Request, object_name: str = Form(...)):
 async def admin_objects_page(request: Request):
     with get_db() as conn:
         obj_rows = conn.execute(
-            "SELECT object_id, object_name, latitude, longitude, genre FROM objects ORDER BY object_id ASC"
+            "SELECT object_id, object_name, latitude, longitude, genre FROM objects ORDER BY object_id DESC"
         ).fetchall()
     image_map = get_store_image_map()
     objects_list = [

@@ -247,6 +247,7 @@
             {% endif %}
           </th>
           <th>コメント</th>
+          <th>リアクション</th>
           <th>操作</th>
           {% endif %}
         </tr>
@@ -302,6 +303,14 @@
               {% endif %}
             </div>
             {% endif %}
+          </td>
+          <td style="text-align:center;white-space:nowrap;font-size:11px;line-height:1.8;">
+            {% set rh = rv.reactions.get('heart', 0) %}
+            {% set rw = rv.reactions.get('want_to_go', 0) %}
+            {% set ra = rv.reactions.get('agree', 0) %}
+            <span style="color:{% if rh %}#e53e3e{% else %}#ccc{% endif %}">♥ {{ rh }}</span><br>
+            <span style="color:{% if rw %}#3182ce{% else %}#ccc{% endif %}">📍 {{ rw }}</span><br>
+            <span style="color:{% if ra %}#d69e2e{% else %}#ccc{% endif %}">✓ {{ ra }}</span>
           </td>
           <td class="td-action">
             <form method="post" action="/admin/delete_review" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">

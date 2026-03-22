@@ -2554,10 +2554,23 @@ async def admin_comments_page(request: Request, sort: str = "date_desc", page: i
                     f"ORDER BY rr.created_at DESC",
                     review_ids
                 ).fetchall()
+                # リアクション数を取得
+                reaction_rows = conn.execute(
+                    f"SELECT review_id, reaction_type, COUNT(*) as cnt FROM review_reactions "
+                    f"WHERE review_id IN ({placeholders}) GROUP BY review_id, reaction_type",
+                    review_ids
+                ).fetchall()
             else:
                 report_rows = []
+                reaction_rows = []
 
     total_pages = max(1, (total_count + _ADMIN_PAGE_SIZE - 1) // _ADMIN_PAGE_SIZE)
+
+    # review_id ごとにリアクションをグループ化
+    reactions_by_review: dict[int, dict[str, int]] = {}
+    if not show_deleted:
+        for rc in reaction_rows:
+            reactions_by_review.setdefault(rc["review_id"], {})[rc["reaction_type"]] = rc["cnt"]
 
     # review_id ごとに通報をグループ化
     reports_by_review = {}
@@ -2580,6 +2593,7 @@ async def admin_comments_page(request: Request, sort: str = "date_desc", page: i
             "comment": r["comment"],
             "created_at": r["created_at"][:10] if r["created_at"] else "",
             "reports": reports_by_review.get(r["review_id"], []),
+            "reactions": reactions_by_review.get(r["review_id"], {}),
             "deleted_at": r["deleted_at"][:10] if show_deleted and r["deleted_at"] else "",
             "deleted_by": {"admin": "管理者", "user": "本人"}.get(r["deleted_by"], "") if show_deleted else "",
         }
